@@ -1,5 +1,4 @@
 import User from '../models/User';
-import jwt from 'jsonwebtoken';
 import { sendEmail } from './sendEmail';
 import CustomRequest from '../types/customRequest';
 import { Response } from 'express';
