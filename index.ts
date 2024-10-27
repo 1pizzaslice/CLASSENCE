@@ -1,6 +1,7 @@
 import dotenv from "dotenv"; 
 dotenv.config();
-import router from './routes/auth';
+import authRoute from './routes/auth';
+import verifyOtpRoute from './routes/verifyOtp';
 import  connectDB  from './db/connect';
 import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
@@ -11,11 +12,12 @@ const app = express();
 const PORT : number = Number(process.env.PORT) || 5000;
 
 
+app.use(logRequest);
 app.use(cors());
 app.use(express.json()); 
 app.use(express.urlencoded({ extended: true }));
-app.use('/auth',router);
-app.use(logRequest);
+app.use('/auth',authRoute);
+app.use('/verify',verifyOtpRoute);
 
 app.use('*', (req: Request, res: Response,next:NextFunction) => {
     const error = new CustomError('Resource not found!', 404);

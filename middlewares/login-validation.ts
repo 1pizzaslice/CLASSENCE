@@ -25,7 +25,13 @@ export const loginValidation = async (req: CustomRequest, res: Response, next: N
         // check if email exists
         const user = await User.findOne({ email: emailFromBody })
         if (user) {
-            
+            if(!user.isVerified){
+                res.status(400).send({
+                    success: false,
+                    message: 'Please register again and verify your email to login!',
+                });
+                return;
+            }
             const validPass = await bcrypt.compare(passwordFromBody, user.password)
             if (validPass) {
                 req.user = { _id: user._id };   
