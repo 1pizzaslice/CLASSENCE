@@ -1,8 +1,8 @@
-import { Request, Response } from 'express';
+import { Response } from 'express';
 import User from '../models/User';
 import CustomRequest from '../types/customRequest';
 
-export const verifyOtp = async (req:CustomRequest, res:Response) => {
+const verifyOtp = async (req:CustomRequest, res:Response) => {
     const { email, otp } = req.body;
     const user = await User.findOne({ email, otp, otpExpires: { $gt: new Date() } });
   
@@ -25,3 +25,4 @@ export const verifyOtp = async (req:CustomRequest, res:Response) => {
     });
   };
   
+    export default verifyOtp;
