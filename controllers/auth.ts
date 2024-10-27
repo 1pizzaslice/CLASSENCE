@@ -24,7 +24,13 @@ export const registerUser = async (req: Request, res: Response) => {
     });
     try {
         await user.save();
-        res.send({ user: user._id })
+        res.status(201).send({
+            success: true,
+            message: 'User registered successfully!',
+            user: {
+                id: user._id, 
+            },
+        });
     } catch (err) {
         res.status(400).send(err)
     }
@@ -35,5 +41,9 @@ export const loginUser = async (req: CustomRequest, res: Response) => {
     const token = jwt.sign({ id: req.user?._id }, process.env.JWT_SECRET as string , {
         expiresIn: process.env.JWT_LIFETIME
     });
-    res.header('Authorization', `Bearer ${token}`).send(token);
+    res.header('Authorization', `Bearer ${token}`).send({
+        success: true,
+        message: 'Logged in successfully!',
+        token: token,
+    });
 }

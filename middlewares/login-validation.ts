@@ -32,10 +32,16 @@ export const loginValidation = async (req: CustomRequest, res: Response, next: N
                 next();
             }
             else
-                res.status(400).send('Invalid Email or Password!!!')
+            res.status(400).send({
+                success: false,
+                message: 'Invalid Email or Password!',
+            });
         }
         else
-            res.status(400).send('Invalid Email or Password!!!')
+        res.status(400).send({
+            success: false,
+            message: 'Invalid Email or Password!',
+        });
     }
 
 }

@@ -16,14 +16,21 @@ type RequestBody = {
 export const registerValidation = async (req: Request, res: Response, next: NextFunction) => {
     // validating using zod
     const parsed = registerSchema.safeParse(req.body);
-    if (!parsed.success)
-        res.status(400).send(parsed.error)
+    if (!parsed.success) {
+        res.status(400).send({
+            success: false,
+            error: parsed.error, // validation error
+        });
+    }
     else {
         const { email: emailFromBody }: RequestBody = req.body;
         // checking to see if the user is already registered
         const emailExist = await User.findOne({ email: emailFromBody })
         if (emailExist)
-            res.status(400).send('Email already exists!!!')
+            res.status(400).send({
+                success: false,
+                message: 'Email already exists!!!',
+            });
         else
             next();
     }
