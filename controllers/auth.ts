@@ -2,6 +2,7 @@ import { Response, Request } from "express";
 import CustomRequest from "../types/customRequest";
 import User from "../models/User";
 import bcrypt from 'bcrypt';
+import { sendOtpEmail } from "../utility/sendOtpVerificationEmail";
 import jwt from "jsonwebtoken";
 
 type RequestBody = {
@@ -24,9 +25,10 @@ export const registerUser = async (req: Request, res: Response) => {
     });
     try {
         await user.save();
+        sendOtpEmail(req, res);
         res.status(201).send({
             success: true,
-            message: 'User registered successfully!',
+            message: 'OTP sent to your email',
             user: {
                 id: user._id, 
             },

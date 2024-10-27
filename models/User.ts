@@ -5,6 +5,11 @@ interface IUser extends Document {
     name: string;
     email: string;
     password: string;
+    resetPasswordToken?: string;
+    resetPasswordExpires?: Date;
+    otp?:string;
+    otpExpires?:Date;
+    isVerified:boolean;
 }
 
 const UserSchema: Schema = new Schema({
@@ -25,6 +30,23 @@ const UserSchema: Schema = new Schema({
         max: 1024, //enough space to store hashes 
         min: 6
     },
+    resetPasswordToken: {
+        type: String,
+    },
+    resetPasswordExpires: {
+        type: Date,
+    },
+    otp:{
+        type:String
+    },
+    otpExpires:{
+        type:Date
+    },
+    isVerified:{
+        type:Boolean,
+        required:true,
+        default:false
+    }
 })
 
 const User = model<IUser>('User', UserSchema)
