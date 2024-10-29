@@ -13,6 +13,12 @@ type RequestBody = {
 export const registerUser = async (req: Request, res: Response,next:NextFunction) => {
     const { name, email, password }: RequestBody = req.body;
 
+    const emailExist = await User.findOne({ email })
+    if (emailExist){
+        next(new CustomError('Email allready exists !!', 400));
+        return;
+    }
+
     // hash password
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
@@ -41,6 +47,24 @@ export const registerUser = async (req: Request, res: Response,next:NextFunction
 export const loginUser = async (req: CustomRequest, res: Response , next: NextFunction) => {
     // create & assign a JWT
     try {
+        const { email , password } = req.body ;
+        const user = await User.findOne({ email})
+        if (!user) {
+            next(new CustomError('User not found', 400));
+            return;
+        }
+        if(!user.isVerified){
+            next(new CustomError('Please verify your email to login!', 400));
+            return;
+        }
+        const validPass = await bcrypt.compare(password , user.password)
+        if (validPass) {
+            req.user = { _id: user._id };   
+            next();
+        }
+        else
+            next(new CustomError('Invalid Email or Password', 400));
+        
         const token = jwt.sign({ id: req.user?._id }, process.env.JWT_SECRET as string , {
             expiresIn: process.env.JWT_LIFETIME
         });
