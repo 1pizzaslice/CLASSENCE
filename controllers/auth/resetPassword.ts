@@ -4,6 +4,7 @@ import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
 import { sendEmail } from "../../utility"; 
 import { CustomError } from "../../types";
+import { z } from "zod";
 
 export const requestPasswordReset = async (req: Request, res: Response,next:NextFunction) => {
   try {
