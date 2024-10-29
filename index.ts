@@ -1,7 +1,6 @@
 import dotenv from "dotenv"; 
 dotenv.config();
-import authRoute from './routes/auth';
-import verifyOtpRoute from './routes/verifyOtp';
+import {authRoute} from './routes/';
 import  connectDB  from './db/connect';
 import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
@@ -27,8 +26,7 @@ app.use(logRequest);
 app.use(cors());
 app.use(express.json()); 
 app.use(express.urlencoded({ extended: true }));
-app.use('/auth',authRoute);
-app.use('/verify',verifyOtpRoute);
+app.use('/api/auth',authRoute);
 
 app.use('*', (req: Request, res: Response,next:NextFunction) => {
     const error = new CustomError('Resource not found!', 404);
