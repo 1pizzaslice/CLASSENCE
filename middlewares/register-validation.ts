@@ -24,7 +24,7 @@ const registerValidation = async (req: Request, res: Response, next: NextFunctio
     try {
         const parsed = registerSchema.safeParse(req.body);
         if (!parsed.success) {
-            next(new CustomError(`${parsed.error}`, 400));
+            next(new CustomError(`${parsed.error.issues[0].message}`, 400));
             return;
         }
         else {

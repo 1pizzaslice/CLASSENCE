@@ -12,14 +12,21 @@ type RequestBody = {
 // zod validation
 const loginSchema = z.object({
     email: z.string().min(6).email(),
-    password: z.string().min(6)
+    password: z
+        .string()
+        .min(8, "Password must be at least 8 characters long")
+        .regex(/[A-Z]/, "Password must contain at least one uppercase letter")
+        .regex(/\d/, "Password must contain at least one number")
+        .regex(/[!@#$%^&*(),.?":{}|<>]/, "Password must contain at least one special character"),
 }).strict();
 
  const loginValidation = async (req: CustomRequest, res: Response, next: NextFunction) => {
     // validating using zod
     const parsed = loginSchema.safeParse(req.body);  // using safe parse so it dont give error
-    if (!parsed.success)
-        res.status(400).send(parsed.error)
+    if (!parsed.success) {
+        next(new CustomError(`${parsed.error.issues[0].message}`, 400));
+        return;
+    }
     else {
         const { email: emailFromBody, password: passwordFromBody }: RequestBody = req.body;
         // check if email exists
