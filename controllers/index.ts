@@ -1,3 +1,3 @@
 export {loginUser,registerUser} from "./auth";
-export {default as verifyOtp} from "./verifyOtp";
-export {requestPasswordReset,resetPassword} from "./resetPassword";
+export {verifyOtp, sendOtpEmail,resendOtp} from "./auth/otp";
+export {requestPasswordReset,resetPassword} from "./auth/resetPassword";

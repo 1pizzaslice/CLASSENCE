@@ -28,7 +28,7 @@ export const loginValidation = async (req: CustomRequest, res: Response, next: N
             if(!user.isVerified){
                 res.status(400).send({
                     success: false,
-                    message: 'Please register again and verify your email to login!',
+                    message: 'Please verify your email to login!',
                 });
                 return;
             }

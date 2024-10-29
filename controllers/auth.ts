@@ -1,8 +1,8 @@
-import { Response, Request } from "express";
-import CustomRequest from "../types/customRequest";
-import User from "../models/User";
+import { Response, Request, NextFunction } from "express";
+import {CustomRequest} from "../types";
+import {User} from "../models";
 import bcrypt from 'bcrypt';
-import { sendOtpEmail } from "../utility/sendOtpVerificationEmail";
+import { sendOtpEmail } from "./index";
 import jwt from "jsonwebtoken";
 
 type RequestBody = {
@@ -10,7 +10,7 @@ type RequestBody = {
     email: string;
     password: string
 }
-export const registerUser = async (req: Request, res: Response) => {
+export const registerUser = async (req: Request, res: Response,next:NextFunction) => {
     const { name, email, password }: RequestBody = req.body;
 
     // hash password
@@ -25,7 +25,7 @@ export const registerUser = async (req: Request, res: Response) => {
     });
     try {
         await user.save();
-        sendOtpEmail(req, res);
+        sendOtpEmail(req, res,next);
         res.status(201).send({
             success: true,
             message: 'OTP sent to your email',
