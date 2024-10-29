@@ -1,28 +1,34 @@
-import { Response } from 'express';
-import User from '../models/User';
-import CustomRequest from '../types/customRequest';
+import { NextFunction, Response } from 'express';
+import {User,Otp} from '../models/';
+import {CustomRequest,CustomError} from '../types/';
 
-const verifyOtp = async (req:CustomRequest, res:Response) => {
+const verifyOtp = async (req: CustomRequest, res: Response,next:NextFunction) => {
+  try {
     const { email, otp } = req.body;
-    const user = await User.findOne({ email, otp, otpExpires: { $gt: new Date() } });
-  
-    if (!user) {
-        res.status(400).json({
-            success: false,
-            message: 'Invalid OTP or OTP expired',
-        })
+
+    const storedOtp = await Otp.findOne({ email, otp });
+
+    if (!storedOtp) {
+        next(new CustomError('Invalid OTP!', 400));
         return;
     }
-  
+
+    const user = await User.findOne({ email });
+    if (!user) {
+        next(new CustomError('User not found!', 404));
+        return;
+    }
+
     user.isVerified = true;
-    user.otp = undefined; 
-    user.otpExpires = undefined;
     await user.save();
-  
+    await Otp.deleteOne({ email, otp });
     res.status(200).json({
         success: true,
         message: 'Email verified successfully!',
     });
-  };
-  
-    export default verifyOtp;
+  } catch (error) {
+    next(new CustomError('Something went wrong!', 500));
+  }
+};
+
+export default verifyOtp;
