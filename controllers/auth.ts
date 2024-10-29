@@ -1,8 +1,8 @@
 import { Response, Request, NextFunction } from "express";
-import {CustomRequest} from "../types/";
-import {User} from "../models/";
+import {CustomRequest} from "../types";
+import {User} from "../models";
 import bcrypt from 'bcrypt';
-import { sendOtpEmail } from "../utility/";
+import { sendOtpEmail } from "./index";
 import jwt from "jsonwebtoken";
 
 type RequestBody = {

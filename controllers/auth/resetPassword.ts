@@ -1,9 +1,9 @@
 import { Response, Request, NextFunction } from "express";
-import {User} from "../models/";
+import {User} from "../../models";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
-import { sendEmail } from "../utility/"; 
-import { CustomError } from "../types";
+import { sendEmail } from "../../utility"; 
+import { CustomError } from "../../types";
 
 export const requestPasswordReset = async (req: Request, res: Response,next:NextFunction) => {
   try {
