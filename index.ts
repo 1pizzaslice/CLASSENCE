@@ -11,6 +11,7 @@ import rateLimit from 'express-rate-limit';
 const app = express();
 const PORT : number = Number(process.env.PORT) || 5000;
 
+app.set('trust proxy', 1);   // to resolve nginx proxy issue
 
 const limiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 min 
