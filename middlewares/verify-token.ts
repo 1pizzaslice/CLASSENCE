@@ -1,24 +1,31 @@
 import { Request, Response, NextFunction } from "express";
-import CustomRequest from "../types/customRequest";
+import {CustomRequest , CustomError } from "../types";
 
 import jwt, { JwtPayload } from "jsonwebtoken";
 
-export const verify = (req: CustomRequest, res: Response, next: NextFunction) => {
+ const verify = (req: CustomRequest, res: Response, next: NextFunction) => {
     const auth = req.header('Authorization');
-    if (!auth)
-        return res.status(401).send('Access denied!!!')
+    if (!auth){
+        next(new CustomError(`Access denied`, 401));
+        return
+    }
     let token = auth.split(' ')[1];
-    if (!token)
-        return res.status(401).send('Access denied!!!')
+    if (!token){
+        next(new CustomError(`Access denied`, 401));
+        return
+    }
     try {
         const verify = jwt.verify(token, process.env.JWT_SECRET as string) as JwtPayload & { _id: string };
         if (verify && '_id' in verify) {
             req.user = { _id: verify._id };
             next();
         } else {
-            return res.status(400).send('Invalid token!!!');
+            next(new CustomError(`Invalid token`, 400));
+            return
         }
     } catch (err) {
-        return res.status(400).send('Invalid token!!!')
+        next(new CustomError(`Something went wrong`, 500));
+            return
     }
 }
+export default verify;

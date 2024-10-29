@@ -1,8 +1,8 @@
 import { Response, Request, NextFunction } from "express";
-import {CustomRequest} from "../types";
-import {User} from "../models";
+import {CustomRequest , CustomError} from "../../types";
+import {User} from "../../models";
 import bcrypt from 'bcrypt';
-import { sendOtpEmail } from "./index";
+import { sendOtpEmail } from "../index";
 import jwt from "jsonwebtoken";
 
 type RequestBody = {
@@ -34,18 +34,23 @@ export const registerUser = async (req: Request, res: Response,next:NextFunction
             },
         });
     } catch (err) {
-        res.status(400).send(err)
+        next(new CustomError('Something went wrong', 500));
     }
 }
 
-export const loginUser = async (req: CustomRequest, res: Response) => {
+export const loginUser = async (req: CustomRequest, res: Response , next: NextFunction) => {
     // create & assign a JWT
-    const token = jwt.sign({ id: req.user?._id }, process.env.JWT_SECRET as string , {
-        expiresIn: process.env.JWT_LIFETIME
-    });
-    res.header('Authorization', `Bearer ${token}`).send({
-        success: true,
-        message: 'Logged in successfully!',
-        token: token,
-    });
+    try {
+        const token = jwt.sign({ id: req.user?._id }, process.env.JWT_SECRET as string , {
+            expiresIn: process.env.JWT_LIFETIME
+        });
+        res.header('Authorization', `Bearer ${token}`).send({
+            success: true,
+            message: 'Logged in successfully!',
+            token: token,
+        });
+    } catch (error) {
+        next(new CustomError('Something went wrong', 500));
+    }
+
 }
