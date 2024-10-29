@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express'
-import CustomRequest from "../types/customRequest";
+import {CustomRequest , CustomError } from "../types";
 import { z } from "zod";
 import bcrypt from 'bcrypt';
 import User from '../models/User';
@@ -15,7 +15,7 @@ const loginSchema = z.object({
     password: z.string().min(6)
 }).strict();
 
-export const loginValidation = async (req: CustomRequest, res: Response, next: NextFunction) => {
+ const loginValidation = async (req: CustomRequest, res: Response, next: NextFunction) => {
     // validating using zod
     const parsed = loginSchema.safeParse(req.body);  // using safe parse so it dont give error
     if (!parsed.success)
@@ -26,10 +26,7 @@ export const loginValidation = async (req: CustomRequest, res: Response, next: N
         const user = await User.findOne({ email: emailFromBody })
         if (user) {
             if(!user.isVerified){
-                res.status(400).send({
-                    success: false,
-                    message: 'Please verify your email to login!',
-                });
+                next(new CustomError('Please verify your email to login!', 400));
                 return;
             }
             const validPass = await bcrypt.compare(passwordFromBody, user.password)
@@ -38,16 +35,12 @@ export const loginValidation = async (req: CustomRequest, res: Response, next: N
                 next();
             }
             else
-            res.status(400).send({
-                success: false,
-                message: 'Invalid Email or Password!',
-            });
+            next(new CustomError('Invalid Email or Password', 400));
         }
         else
-        res.status(400).send({
-            success: false,
-            message: 'Invalid Email or Password!',
-        });
+        next(new CustomError('User not found', 400));
     }
 
 }
+
+export default loginValidation;

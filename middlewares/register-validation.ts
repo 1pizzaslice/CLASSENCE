@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from "express";
+import {CustomError } from "../types";
 
 import { z } from "zod";
 import User from "../models/User";
@@ -18,28 +19,27 @@ const registerSchema = z.object({
 type RequestBody = {
     email: string;
 }
-export const registerValidation = async (req: Request, res: Response, next: NextFunction) => {
+const registerValidation = async (req: Request, res: Response, next: NextFunction) => {
     // validating using zod
-    const parsed = registerSchema.safeParse(req.body);
-    if (!parsed.success) {
-        res.status(400).send({
-            success: false,
-            error: parsed.error, // validation error
-        });
-        return;
-    }
-    else {
-        const { email: emailFromBody }: RequestBody = req.body;
-        // checking to see if the user is already registered
-        const emailExist = await User.findOne({ email: emailFromBody })
-        if (emailExist){
-            res.status(400).send({
-                success: false,
-                message: 'Email already exists!!!',
-            });
+    try {
+        const parsed = registerSchema.safeParse(req.body);
+        if (!parsed.success) {
+            next(new CustomError(`${parsed.error}`, 400));
             return;
         }
-        else
-            next();
+        else {
+            const { email: emailFromBody }: RequestBody = req.body;
+            // checking to see if the user is already registered
+            const emailExist = await User.findOne({ email: emailFromBody })
+            if (emailExist){
+                next(new CustomError('Email allready exists !!', 400));
+                return;
+            }
+            else
+                next();
+        }
+    } catch (error) {
+        next(new CustomError('Something went wrong', 500));
     }
 }
+export default registerValidation;
