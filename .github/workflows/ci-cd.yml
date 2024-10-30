@@ -25,18 +25,24 @@ jobs:
         run: npm run build  
 
       - name: Copy Files to Server
+        shell: bash
         env:
           SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}  
           USERNAME: ${{ secrets.SERVER_USER }}   
           SERVER_IP: ${{ secrets.SERVER_HOST }}  
-          PATH: ${{ secrets.DEPLOY_PATH }}
+          DPATH: ${{ secrets.DEPLOY_PATH }}
         run: |
           mkdir -p ~/.ssh
           echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
           ssh-keyscan -H $SERVER_IP >> ~/.ssh/known_hosts
-          scp -r ./dist/* $USERNAME@$SERVER_IP:$PATH 
+          scp -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa -r ./dist/* $USERNAME@$SERVER_IP:$DPATH 
 
       - name: Restart Service
+        shell: bash
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}  
+          USERNAME: ${{ secrets.SERVER_USER }}   
+          SERVER_IP: ${{ secrets.SERVER_HOST }}
         run: |
-          ssh -o StrictHostKeyChecking=no $USERNAME@$SERVER_IP 'sudo systemctl restart classence.service'
+          ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa $USERNAME@$SERVER_IP 'sudo systemctl restart classence.service'
