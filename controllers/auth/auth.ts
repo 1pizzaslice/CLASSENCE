@@ -60,7 +60,6 @@ export const loginUser = async (req: CustomRequest, res: Response , next: NextFu
         const validPass = await bcrypt.compare(password , user.password)
         if (validPass) {
             req.user = { _id: user._id };   
-            next();
         }
         else
             next(new CustomError('Invalid Email or Password', 400));
@@ -68,10 +67,15 @@ export const loginUser = async (req: CustomRequest, res: Response , next: NextFu
         const token = jwt.sign({ id: req.user?._id }, process.env.JWT_SECRET as string , {
             expiresIn: process.env.JWT_LIFETIME
         });
+        const refreshToken = jwt.sign({ id: req.user?._id }, process.env.JWT_SECRET as string , {
+            expiresIn: '1d'
+        });
+    
         res.header('Authorization', `Bearer ${token}`).send({
             success: true,
             message: 'Logged in successfully!',
             token: token,
+            refreshToken: refreshToken,
         });
     } catch (error) {
         next(new CustomError('Something went wrong', 500));
