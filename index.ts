@@ -30,7 +30,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use('/api/auth',authRoute);
 
 app.use('*', (req: Request, res: Response,next:NextFunction) => {
-    const error = new CustomError('Resource not found!', 404);
+    const error = new CustomError('Resource not found!!!', 404);
     next(error);
 });
 
