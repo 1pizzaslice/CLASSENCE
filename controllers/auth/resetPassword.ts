@@ -4,7 +4,6 @@ import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
 import { sendEmail } from "../../utility"; 
 import { CustomError } from "../../types";
-import { z } from "zod";
 
 export const requestPasswordReset = async (req: Request, res: Response,next:NextFunction) => {
   try {
@@ -51,16 +50,14 @@ export const requestPasswordReset = async (req: Request, res: Response,next:Next
 };
 
 export const resetPassword = async (req: Request, res: Response,next:NextFunction) => {
-  const { token } = req.params;
-  const { newPassword } = req.body; 
-//   console.log(typeof token);
-  if (typeof token !== 'string') {
-    next(new CustomError('Invalid token', 400));
-    return;
-  }
-
   try {
-
+    const { token } = req.params;
+    const { password } = req.body;  
+    //   console.log(typeof token);
+    if (typeof token !== 'string') {
+      next(new CustomError('Invalid token', 400));
+      return;
+    }
     const decoded = jwt.verify(token, process.env.JWT_SECRET as string) as jwt.JwtPayload;
     const userId = decoded.userId;
 
@@ -76,7 +73,7 @@ export const resetPassword = async (req: Request, res: Response,next:NextFunctio
       }
 
     const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(newPassword, salt);
+    const hashedPassword = await bcrypt.hash(password, salt);
     user.resetPasswordToken = undefined; 
     user.resetPasswordExpires = undefined;
     user.password = hashedPassword;
@@ -84,6 +81,7 @@ export const resetPassword = async (req: Request, res: Response,next:NextFunctio
 
     res.status(200).json({ success: true, message: 'Password reset successfully' });    
   } catch (error) {
+    console.log( error);
     next(new CustomError('Something went wrong!', 500));
   }
 };
