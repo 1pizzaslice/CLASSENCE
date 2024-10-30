@@ -2,12 +2,13 @@
   "name": "classence-backend",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "dist/index.js",
   "scripts": {
-    "start": "ts-node index.ts",
-    "dev": "nodemon index.ts",
-    "build": "tsc",
-    "serve": "node dist/index.js"
+    "start": "ts-node index.ts",             
+    "dev": "nodemon index.ts",              
+    "build": "tsc",                        
+    "serve": "node dist/index.js",          
+    "postinstall": "tsc"               
   },
   "author": "",
   "license": "ISC",
