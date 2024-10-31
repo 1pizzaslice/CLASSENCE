@@ -7,6 +7,7 @@ interface IUser extends Document {
     password: string;
     resetPasswordToken?: string;
     resetPasswordExpires?: Date;
+    lastPasswordResetRequest?: Date;
     isVerified:boolean;
 }
 
@@ -32,6 +33,9 @@ const UserSchema: Schema = new Schema({
         type: String,
     },
     resetPasswordExpires: {
+        type: Date,
+    },
+    lastPasswordResetRequest: {
         type: Date,
     },
     isVerified:{
