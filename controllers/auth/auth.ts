@@ -15,8 +15,11 @@ export const registerUser = async (req: Request, res: Response,next:NextFunction
 
     const emailExist = await User.findOne({ email })
     if (emailExist){
-        next(new CustomError('Email allready exists !!', 400));
-        return;
+        if(emailExist.isVerified){
+            next(new CustomError('Email allready exists !!', 400));
+            return;
+        }
+    await User.deleteOne({ email });
     }
 
     // hash password
@@ -61,8 +64,10 @@ export const loginUser = async (req: CustomRequest, res: Response , next: NextFu
         if (validPass) {
             req.user = { _id: user._id };   
         }
-        else
+        else{
             next(new CustomError('Invalid Email or Password', 400));
+            return;
+        }
         
         const token = jwt.sign({ id: req.user?._id }, process.env.JWT_SECRET as string , {
             expiresIn: process.env.JWT_LIFETIME
