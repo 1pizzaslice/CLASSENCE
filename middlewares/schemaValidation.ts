@@ -16,7 +16,7 @@ const baseSchema = z.object({
 }).strict();
 
 export const registerSchema = baseSchema.pick({ name: true, email: true, password: true });
-export const loginSchema = baseSchema.pick({ email: true, password: true });
+export const loginSchema = baseSchema.pick({ email: true});
 export const resetPasswordSchema = baseSchema.pick({ password: true });
 
 export const validateRequest = (schema: ZodSchema<any>) => {
