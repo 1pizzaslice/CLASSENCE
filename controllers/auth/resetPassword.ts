@@ -35,30 +35,41 @@ export const requestPasswordReset = async (req: Request, res: Response,next:Next
     user.resetPasswordExpires = new Date(Date.now() + 3600000); 
     user.lastPasswordResetRequest = new Date(now);
     await user.save();
-    const data =`
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 25px; border: 1px solid #e0e0e0; border-radius: 12px; background-color: #f9fafb; display: flex;flex-direction: column ;">
-        
-        <img src="https://i.ibb.co/41hPJtW/logo.png" alt="" style="width: 150px; align-self: center;">
-        <br>
-        <br>
-      <p style="color: #555; font-size: 16px; line-height: 1.6;">Hello ${user.name},</p>
-      <br>
-      <p style="color: #555; font-size: 16px; line-height: 1.6;">We received a request to reset your password. Click the button below to proceed:</p>
-      
-      <br>
-      <div style="text-align: center; margin: 20px 0;">
-        <a href="${resetUrl}" style="background-color: #066769; color: white; padding: 12px 25px; text-decoration: none; border-radius: 6px; font-size: 16px; display: inline-block;">Reset Password</a>
+    const data = `
+    <body style="margin: 0; padding: 0; width: 100%; font-family: Arial, sans-serif; background-color: #f4f4f4;">
+      <div style="max-width: 600px; width: 100%; margin: 20px auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 10px; background-color: #ffffff; box-sizing: border-box;">
+        <div style="text-align: center; margin-bottom: 30px;">
+          <img src="https://i.ibb.co/41hPJtW/logo.png" alt="Logo" style="width: 120px; max-width: 100%;">
+        </div>
+        <p style="color: #333333; font-size: 18px; line-height: 1.5; text-align: center; margin: 0 20px;">
+          Hello ${user.name},
+        </p>
+        <p style="color: #555555; font-size: 16px; line-height: 1.6; text-align: center; margin: 20px 20px;">
+          We received a request to reset your password. Click the button below to proceed:
+        </p>
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="${resetUrl}" style="background-color: #066769; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; font-size: 16px;">
+            Reset Password
+          </a>
+        </div>
+        <p style="color: #555555; font-size: 16px; line-height: 1.6; text-align: center; margin: 20px 20px;">
+          If you didn't request this, please ignore this email. Your account will remain secure.
+        </p>
+        <p style="color: #555555; font-size: 16px; line-height: 1.6; text-align: center; margin: 20px 20px;">
+          Best regards,<br>
+          Classence Team
+        </p>
+        <hr style="border: none; border-top: 1px solid #e0e0e0; margin: 30px 0;">
+        <p style="font-size: 13px; color: #a1a1a1; text-align: center; margin: 20px;">
+          If you're having trouble clicking the button, copy and paste the URL below into your web browser:
+        </p>
+        <p style="font-size: 13px; color: #066769; word-break: break-all; text-align: center; margin: 0;">
+          <a href="${resetUrl}" style="color: #066769; text-decoration: none;">${resetUrl}</a>
+        </p>
       </div>
-      <br>
-      
-      <p style="color: #555; font-size: 16px; line-height: 1.6;">If you didn't request this, please ignore this email. Your account will remain secure.</p>
-      <br><br>
-      <p style="color: #555; font-size: 16px; line-height: 1.6;">Best regards,<br>Classence Team</p>
-      <hr style="border: 0; border-top: 1px solid #e0e0e0; margin: 30px 0;">
-      <p style="font-size: 13px; color: #a1a1a1; text-align: center; line-height: 1.5;">If you're having trouble clicking the button, copy and paste the URL below into your web browser:</p>
-      <p style="font-size: 13px; color: #4b8bf7; word-break: break-all; text-align: center;"><a href="${resetUrl}" style="color: #066769; text-decoration: none;">${resetUrl}</a></p>
-    </div>
-    `
+    </body>
+  `;
+
     
     sendEmail(user.email, 'Password Reset Request', data);
   

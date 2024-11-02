@@ -83,30 +83,26 @@ const sendOtpEmail = async (req: CustomRequest, res:Response,next:NextFunction) 
       expiresAt: new Date(Date.now() + 10 * 60 * 1000)
     });
     await otpData.save();
-    const data =
-      `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 25px; border: 1px solid #e0e0e0; border-radius: 12px; background-color: #f9fafb; display: flex;flex-direction: column ;">
-        <img src="https://i.ibb.co/41hPJtW/logo.png" alt="" style="width: 150px; align-self: center;">
-        <br>
-        <br>
-        <p style="color: #555; font-size: 16px; line-height: 1.6;">Hello ${user.name},</p>
-        <br>
-        <p style="color: #555; font-size: 16px; line-height: 1.6;">Thank you for signing up for Classence! To verify your email address, please enter the One-Time Password (OTP) below:</p>
-        <br>
-        <div style="text-align: center; margin: 20px 0;">
-          <span style="font-size: 28px; font-weight: bold; color: #066769;">${otp}</span>
-        </div>
-        <br>
-        <p style="color: #555; font-size: 16px; line-height: 1.6;">This OTP is valid for the next 10 minutes. Please keep it secure and do not share it with anyone.</p>
-        <br>
-        <p style="color: #555; font-size: 16px; line-height: 1.6;">If you did not request this verification, please disregard this email.</p>
-        <br>
-        <br>
-        <p style="color: #555; font-size: 16px; line-height: 1.6;">Best regards,<br>Classence Team</p>
-        <hr style="border: 0; border-top: 1px solid #e0e0e0; margin: 30px 0;">
-        <p style="font-size: 13px; color: #a1a1a1; text-align: center; line-height: 1.5;">If you encounter any issues, please contact our support team at <a href="mailto:classence.help@gmail.com" style="color: #066769; text-decoration: none;">classence.help@gmail.com</a>.</p>
-      </div>
-      `;    
+      const data = `
+      <body style="margin: 0; padding: 0; width: 100%; font-family: Arial, sans-serif;">
+          <div style="max-width: 600px; width: 100%; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 10px; background-color: #f9fafb; box-sizing: border-box;">
+              <img src="https://i.ibb.co/41hPJtW/logo.png" alt="Logo" style="width: 80%; max-width: 150px; display: block; margin: 0 auto;">
+              <p style="color: #555; font-size: 18px; line-height: 1.5; text-align: center;">&nbsp;Hello ${user.name},</p>
+              <p style="color: #555; font-size: 16px; line-height: 1.6; text-align: center;">Thank you for signing up for Classence! To verify your email address, please enter the One-Time Password (OTP) below:</p>
+              <div style="text-align: center; margin: 20px 0;">
+                  <span style="font-size: 24px; font-weight: bold; color: #066769;">${otp}</span>
+              </div>
+              <p style="color: #555; font-size: 16px; line-height: 1.6; text-align: center;">This OTP is valid for the next 10 minutes. Please keep it secure and do not share it with anyone.</p>
+              <p style="color: #555; font-size: 16px; line-height: 1.6; text-align: center;">If you did not request this verification, please disregard this email.</p>
+              <p style="color: #555; font-size: 16px; line-height: 1.6; text-align: center;">Best regards,<br>Classence Team</p>
+              <hr style="border: 0; border-top: 1px solid #e0e0e0; margin: 30px 0;">
+              <p style="font-size: 13px; color: #a1a1a1; text-align: center; line-height: 1.5;">
+                  If you encounter any issues, please contact our support team at 
+                  <a href="mailto:classence.help@gmail.com" style="color: #066769; text-decoration: none;">classence.help@gmail.com</a>.
+              </p>
+          </div>
+      </body>
+      `;
 
     sendEmail(user.email, 'Your OTP for email verification', data);
   } catch (error) {
