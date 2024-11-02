@@ -36,19 +36,28 @@ export const requestPasswordReset = async (req: Request, res: Response,next:Next
     user.lastPasswordResetRequest = new Date(now);
     await user.save();
     const data =`
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 10px;">
-        <h2 style="color: #333; text-align: center;">Password Reset Request</h2>
-        <p>Hi ${user.name},</p>
-        <p>You requested a password reset for your account. Please click the button below to reset your password:</p>
-        <div style="text-align: center; margin: 20px 0;">
-          <a href="${resetUrl}" style="background-color: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; font-size: 16px;">Reset Password</a>
-        </div>
-        <p>If you didn't request this password reset, you can ignore this email.</p>
-        <p>Best regards,<br>Classence</p>
-        <hr style="border: 0; border-top: 1px solid #ddd; margin: 30px 0;">
-        <p style="font-size: 12px; color: #888; text-align: center;">If you're having trouble clicking the button, copy and paste the URL below into your web browser:</p>
-        <p style="font-size: 12px; color: #007bff; word-break: break-all; text-align: center;"><a href="${resetUrl}" style="color: #007bff;">${resetUrl}</a></p>
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 25px; border: 1px solid #e0e0e0; border-radius: 12px; background-color: #f9fafb; display: flex;flex-direction: column ;">
+        
+        <img src="https://i.ibb.co/41hPJtW/logo.png" alt="" style="width: 150px; align-self: center;">
+        <br>
+        <br>
+      <p style="color: #555; font-size: 16px; line-height: 1.6;">Hello ${user.name},</p>
+      <br>
+      <p style="color: #555; font-size: 16px; line-height: 1.6;">We received a request to reset your password. Click the button below to proceed:</p>
+      
+      <br>
+      <div style="text-align: center; margin: 20px 0;">
+        <a href="${resetUrl}" style="background-color: #066769; color: white; padding: 12px 25px; text-decoration: none; border-radius: 6px; font-size: 16px; display: inline-block;">Reset Password</a>
       </div>
+      <br>
+      
+      <p style="color: #555; font-size: 16px; line-height: 1.6;">If you didn't request this, please ignore this email. Your account will remain secure.</p>
+      <br><br>
+      <p style="color: #555; font-size: 16px; line-height: 1.6;">Best regards,<br>Classence Team</p>
+      <hr style="border: 0; border-top: 1px solid #e0e0e0; margin: 30px 0;">
+      <p style="font-size: 13px; color: #a1a1a1; text-align: center; line-height: 1.5;">If you're having trouble clicking the button, copy and paste the URL below into your web browser:</p>
+      <p style="font-size: 13px; color: #4b8bf7; word-break: break-all; text-align: center;"><a href="${resetUrl}" style="color: #066769; text-decoration: none;">${resetUrl}</a></p>
+    </div>
     `
     
     sendEmail(user.email, 'Password Reset Request', data);
