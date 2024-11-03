@@ -16,7 +16,7 @@ export const registerUser = async (req: Request, res: Response,next:NextFunction
     const emailExist = await User.findOne({ email })
     if (emailExist){
         if(emailExist.isVerified){
-            next(new CustomError('Email allready exists !!', 400));
+            next(new CustomError('Email already exists !!', 400));
             return;
         }
     await User.deleteOne({ email });
@@ -65,7 +65,7 @@ export const loginUser = async (req: CustomRequest, res: Response , next: NextFu
             req.user = { _id: user._id };   
         }
         else{
-            next(new CustomError('Invalid Email or Password', 400));
+            next(new CustomError('Incorrect Password', 400));
             return;
         }
         
