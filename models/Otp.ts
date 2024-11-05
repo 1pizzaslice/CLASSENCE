@@ -5,6 +5,8 @@ interface IOtp extends Document{
     email:string;
     otp:string;
     expiresAt:Date;
+    createdAt:Date;
+    updatedAt:Date;
 }
 
 const OtpSchema:Schema = new Schema({
@@ -21,7 +23,7 @@ const OtpSchema:Schema = new Schema({
         required:true,
         index:{expires:0}
     }
-});
+},{timestamps:true});
 
 
 
