@@ -53,6 +53,14 @@ const resendOtp = async(req: CustomRequest, res: Response,next:NextFunction) => 
       next(new CustomError('Email already verified!', 400));
       return;
     }
+
+    const latestOtp = await Otp.findOne({ email }).sort({ createdAt: -1 });
+    const currentTime = Date.now();
+    const thirtySeconds = 30 * 1000; 
+    if (latestOtp && currentTime - latestOtp.createdAt.getTime() < thirtySeconds) {
+      next(new CustomError('OTP requests are limited to one per 30 seconds.', 429));
+      return;
+    }
     sendOtpEmail(req, res,next);
     res.status(200).json({
       success: true,
@@ -104,7 +112,8 @@ const sendOtpEmail = async (req: CustomRequest, res:Response,next:NextFunction) 
       </body>
       `;
 
-    sendEmail(user.email, 'Your OTP for email verification', data);
+    sendEmail(user.email, 'Your OTP for email verification', data)
+      .catch((error) => {console.log("Error sending email: ", error);});
   } catch (error) {
     next(new CustomError('Something went wrong!', 500));
   }
