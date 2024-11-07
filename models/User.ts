@@ -9,6 +9,9 @@ interface IUser extends Document {
     resetPasswordExpires?: Date;
     lastPasswordResetRequest?: Date;
     isVerified:boolean;
+    classRooms: string[];
+    createdAt: Date;
+    updatedAt: Date;
 }
 
 const UserSchema: Schema = new Schema({
@@ -42,8 +45,13 @@ const UserSchema: Schema = new Schema({
         type:Boolean,
         required:true,
         default:false
-    }
-})
+    },
+    classRooms:[{
+        type:Schema.Types.ObjectId,
+        ref:'Classroom'
+    }]
+
+},{timestamps:true})
 
 const User = model<IUser>('User', UserSchema)
 export default User;

@@ -12,14 +12,14 @@ type RequestBody = {
 }
 export const registerUser = async (req: Request, res: Response,next:NextFunction) => {
     const { name, email, password }: RequestBody = req.body;
-
-    const emailExist = await User.findOne({ email })
+    const lowerEmail = email.toLowerCase();
+    const emailExist = await User.findOne({ email:lowerEmail })
     if (emailExist){
         if(emailExist.isVerified){
             next(new CustomError('Email already exists !!', 400));
             return;
         }
-    await User.deleteOne({ email });
+    await User.deleteOne({ email:lowerEmail });
     }
 
     // hash password
@@ -29,7 +29,7 @@ export const registerUser = async (req: Request, res: Response,next:NextFunction
     // store user in db
     const user = new User({
         name: name,
-        email: email,
+        email: lowerEmail,
         password: hashedPassword
     });
     try {
@@ -51,7 +51,8 @@ export const loginUser = async (req: CustomRequest, res: Response , next: NextFu
     // create & assign a JWT
     try {
         const { email , password } = req.body ;
-        const user = await User.findOne({ email})
+        const lowerEmail = email.toLowerCase();
+        const user = await User.findOne({ email:lowerEmail})
         if (!user) {
             next(new CustomError('User not found', 400));
             return;
@@ -69,10 +70,10 @@ export const loginUser = async (req: CustomRequest, res: Response , next: NextFu
             return;
         }
         
-        const token = jwt.sign({ id: req.user?._id }, process.env.JWT_SECRET as string , {
-            expiresIn: process.env.JWT_LIFETIME
+        const token = jwt.sign({ _id: req.user?._id }, process.env.JWT_SECRET as string , {
+            expiresIn: '1h'
         });
-        const refreshToken = jwt.sign({ id: req.user?._id }, process.env.JWT_SECRET as string , {
+        const refreshToken = jwt.sign({ _id: req.user?._id }, process.env.JWT_SECRET as string , {
             expiresIn: '1d'
         });
     
