@@ -1,17 +1,17 @@
-import {Schema,model,Document} from "mongoose";
-
-interface IClassroom extends Document{
+import {Schema,model,Document,Types} from "mongoose";
+export interface IClassroom extends Document{
     _id:string;
     name:string;
     code:string;
     students:string[];
-    teacher:string;
+    teacher:Types.ObjectId;
     assignments:string[];
     announcements:string[];
     isDeleted:boolean;
     isCompleted:boolean;
     createdAt:Date;
     updatedAt:Date;
+    invitedStudents:string[];
 }
 
 const ClassroomSchema = new Schema({
@@ -47,7 +47,10 @@ const ClassroomSchema = new Schema({
     isCompleted:{
         type:Boolean,
         default:false
-    }
+    },
+    invitedStudents:[{
+        type:Schema.Types.ObjectId,
+    }]
 },{timestamps:true});
 
 const Classroom = model<IClassroom>('Classroom',ClassroomSchema);

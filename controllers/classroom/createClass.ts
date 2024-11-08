@@ -1,4 +1,4 @@
-import { Response, Request, NextFunction } from "express";
+import { Response, NextFunction } from "express";
 import { User, Classroom } from "../../models";
 import { CustomError, CustomRequest } from "../../types";
 import { v4 as uuidv4 } from "uuid";  // UUID generator
@@ -8,7 +8,7 @@ function generateUniqueCode(length = 6): string {
   return uuid.slice(0, length).toUpperCase();
 }
 
-export const createClass = async (req: CustomRequest, res: Response, next: NextFunction) => {
+const createClass = async (req: CustomRequest, res: Response, next: NextFunction) => {
   const { name } = req.body;
   if (!name) {
     next(new CustomError('Name is required', 400));
@@ -29,12 +29,13 @@ export const createClass = async (req: CustomRequest, res: Response, next: NextF
       return;
     }
 
-    let code = generateUniqueCode();
-    let previousClass = await Classroom.findOne({ code });
-    while (previousClass) {
+    const existingClasses = await Classroom.find().select("code").lean();
+    const existingCodes = new Set(existingClasses.map((cls) => cls.code));
+
+    let code;
+    do {
       code = generateUniqueCode();
-      previousClass = await Classroom.findOne({ code });
-    }
+    } while (existingCodes.has(code));
 
     const classroom = new Classroom({
       name,
@@ -49,7 +50,10 @@ export const createClass = async (req: CustomRequest, res: Response, next: NextF
     res.status(201).send({
       success: true,
       message: 'Classroom created successfully',
-      classroom,
+      classroom:{
+        _id:classroom._id,
+        code:classroom.code
+    }
     });
 
   } catch (error) {

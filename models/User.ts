@@ -1,6 +1,6 @@
 import { Schema, model, Document } from "mongoose"
 
-interface IUser extends Document {
+export interface IUser extends Document {
     _id: string;       // was getting error therefore set the default type to string
     name: string;
     email: string;

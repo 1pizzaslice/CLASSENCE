@@ -12,6 +12,10 @@ type RequestBody = {
 }
 export const registerUser = async (req: Request, res: Response,next:NextFunction) => {
     const { name, email, password }: RequestBody = req.body;
+    if (!name || !email || !password) {
+        next(new CustomError('Name, email and password is required', 400));
+        return;
+    }
     const lowerEmail = email.toLowerCase();
     const emailExist = await User.findOne({ email:lowerEmail })
     if (emailExist){
@@ -51,6 +55,10 @@ export const loginUser = async (req: CustomRequest, res: Response , next: NextFu
     // create & assign a JWT
     try {
         const { email , password } = req.body ;
+        if (!email || !password) {
+            next(new CustomError('Email and password is required', 400));
+            return;
+        }
         const lowerEmail = email.toLowerCase();
         const user = await User.findOne({ email:lowerEmail})
         if (!user) {
