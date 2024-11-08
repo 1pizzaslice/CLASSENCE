@@ -111,6 +111,7 @@ export const resetPassword = async (req: Request, res: Response,next:NextFunctio
     user.resetPasswordToken = undefined; 
     user.resetPasswordExpires = undefined;
     user.password = hashedPassword;
+    //TODO : LOGOUT USER FROM ALL DEVICES.
     await user.save();
 
     res.status(200).json({ success: true, message: 'Password reset successfully' });    
