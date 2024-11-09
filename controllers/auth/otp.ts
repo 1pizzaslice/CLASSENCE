@@ -36,7 +36,8 @@ const verifyOtp = async (req: CustomRequest, res: Response,next:NextFunction) =>
         message: 'Email verified successfully!',
     });
   } catch (error) {
-    next(new CustomError('Something went wrong!', 500));
+    const err = error as Error;
+    next(new CustomError('Something went wrong',500,`${err.message}`));
   }
 };
 
@@ -67,7 +68,8 @@ const resendOtp = async(req: CustomRequest, res: Response,next:NextFunction) => 
       message: 'OTP sent to your email!',
     });
   } catch (error) {
-    next(new CustomError('Something went wrong!', 500));
+    const err = error as Error;
+    next(new CustomError('Something went wrong',500,`${err.message}`));
   }
 }
 
@@ -115,7 +117,8 @@ const sendOtpEmail = async (req: CustomRequest, res:Response,next:NextFunction) 
     sendEmail(user.email, 'Your OTP for email verification', data)
       .catch((error) => {console.log("Error sending email: ", error);});
   } catch (error) {
-    next(new CustomError('Something went wrong!', 500));
+    const err = error as Error;
+    next(new CustomError('Something went wrong',500,`${err.message}`));
   }
 };
     

@@ -5,7 +5,8 @@ import {CustomError} from '../types/';
 const errorHandler = (error: CustomError, req: Request, res: Response, next: NextFunction) => { 
     const statusCode = error.statusCode || 500; 
     const message = error.message || 'Internal Server Error';
-    const log = `${statusCode} ${message} ${new Date().toISOString()} ${req.ip} ${req.method} ${req.url}\n`;
+    const errorMsg = error.error || message; 
+    const log = `${statusCode} ${errorMsg} ${new Date().toISOString()} ${req.ip} ${req.method} ${req.url}\n`;
     const logsDir = path.join(__dirname, '../logs');
     const logFilePath = path.join(logsDir, 'errors.txt');
     if (!fs.existsSync(logsDir)) {
