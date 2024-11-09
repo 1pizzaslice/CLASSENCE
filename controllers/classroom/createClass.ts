@@ -9,13 +9,17 @@ function generateUniqueCode(length = 6): string {
 }
 
 const createClass = async (req: CustomRequest, res: Response, next: NextFunction) => {
-  const { name } = req.body;
-  if (!name) {
-    next(new CustomError('Name is required', 400));
+  const { name,subject,privacy } = req.body;
+  if (!name || !subject || !privacy) {
+    next(new CustomError('Name, Subject or privacy are required!', 400));
     return;
   }
-
+  if(privacy !== "public" && privacy !== "private"){
+    next(new CustomError('Privacy must be either public or private', 400));
+    return;
+  }
   const id = req.user?._id;
+
 
   if (!id) {
     next(new CustomError('User not found', 404));
@@ -40,6 +44,8 @@ const createClass = async (req: CustomRequest, res: Response, next: NextFunction
     const classroom = new Classroom({
       name,
       code,
+      subject,
+      privacy,
       teacher: id,
     });
 
@@ -52,13 +58,16 @@ const createClass = async (req: CustomRequest, res: Response, next: NextFunction
       message: 'Classroom created successfully',
       classroom:{
         _id:classroom._id,
-        code:classroom.code
+        code:classroom.code,
+        name:classroom.name,
+        subject:classroom.subject,
+        privacy:classroom.privacy
     }
     });
 
   } catch (error) {
-    console.log(error);
-    next(new CustomError('Something went wrong', 500));
+    const err = error as Error;
+    next(new CustomError('Something went wrong',500,`${err.message}`));
   }
 };
 

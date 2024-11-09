@@ -46,8 +46,9 @@ export const registerUser = async (req: Request, res: Response,next:NextFunction
                 id: user._id, 
             },
         });
-    } catch (err) {
-        next(new CustomError('Something went wrong', 500));
+    } catch (error) {
+        const err = error as Error;
+        next(new CustomError('Something went wrong',500,`${err.message}`));
     }
 }
 
@@ -92,7 +93,8 @@ export const loginUser = async (req: CustomRequest, res: Response , next: NextFu
             refreshToken: refreshToken,
         });
     } catch (error) {
-        next(new CustomError('Something went wrong', 500));
+        const err = error as Error;
+        next(new CustomError('Something went wrong',500,`${err.message}`));
     }
 
 }

@@ -55,7 +55,8 @@ const removeStudent = async(req:CustomRequest,res:Response,next:NextFunction) =>
             }
         });
     }catch(error){
-        next(new CustomError('Something went wrong',500));
+        const err = error as Error;
+        next(new CustomError('Something went wrong',500,`${err.message}`));
     }
 }
 
