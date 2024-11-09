@@ -79,7 +79,8 @@ export const requestPasswordReset = async (req: Request, res: Response,next:Next
       message: 'Password reset link has been sent to your email! Please check your inbox, it should arrive within a few seconds.'
     });
   } catch (error) {
-    next(new CustomError('Something went wrong!', 500));
+    const err = error as Error;
+    next(new CustomError('Something went wrong',500,`${err.message}`));
   }
 };
 
@@ -116,7 +117,7 @@ export const resetPassword = async (req: Request, res: Response,next:NextFunctio
 
     res.status(200).json({ success: true, message: 'Password reset successfully' });    
   } catch (error) {
-    console.log( error);
-    next(new CustomError('Something went wrong!', 500));
+    const err = error as Error;
+    next(new CustomError('Something went wrong',500,`${err.message}`));
   }
 };

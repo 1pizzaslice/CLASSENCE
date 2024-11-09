@@ -8,8 +8,10 @@ export interface IClassroom extends Document{
     assignments:string[];
     announcements:string[];
     isDeleted:boolean;
+    subject:string;
     isCompleted:boolean;
     createdAt:Date;
+    privacy:string;
     updatedAt:Date;
     invitedStudents:string[];
 }
@@ -23,6 +25,15 @@ const ClassroomSchema = new Schema({
         type:String,
         required:true,
         unique:true
+    },
+    subject:{
+        type:String,
+        required:true
+    },
+    privacy:{
+        type:String,
+        required:true,
+        default:'public'
     },
     students:[{
         type:Schema.Types.ObjectId,

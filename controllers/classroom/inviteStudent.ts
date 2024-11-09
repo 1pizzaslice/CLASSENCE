@@ -2,9 +2,11 @@ import { Response,NextFunction } from "express";
 import { User, Classroom } from "../../models";
 import { CustomError, CustomRequest } from "../../types";
 import { sendEmail } from "../../utility";
+import jwt from "jsonwebtoken";
 
 const inviteStudent = async (req: CustomRequest, res: Response, next: NextFunction) => {
-    const {code,email} = req.body;
+    try {
+        const {code,email} = req.body;
     if(!code || !email){
         next(new CustomError('Code and email is required',400));
         return;
@@ -46,7 +48,11 @@ const inviteStudent = async (req: CustomRequest, res: Response, next: NextFuncti
     }
 
     classroom.invitedStudents.push(student._id);
-    const inviteLink = `${process.env.FRONTEND_URL}/join/${classroom.code}`;
+    let joiningCode = code;
+    if(classroom.privacy === 'private'){
+        joiningCode = jwt.sign({email:student.email,classroomCode:classroom.code},process.env.JWT_SECRET as string,{expiresIn:'1d'});
+    }
+    const inviteLink = `${process.env.FRONTEND_URL}/join/${joiningCode}`;
     const data = `
         <body style="margin: 0; padding: 0; width: 100%; font-family: Arial, sans-serif; background-color: #f4f4f4;">
         <div style="max-width: 600px; width: 100%; margin: 20px auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 10px; background-color: #ffffff; box-sizing: border-box;">
@@ -95,6 +101,10 @@ const inviteStudent = async (req: CustomRequest, res: Response, next: NextFuncti
             code:classroom.code
         }
     });
+    } catch (error) {
+        const err = error as Error;
+        next(new CustomError('Something went wrong',500,`${err.message}`));
+    }
 
 }
 

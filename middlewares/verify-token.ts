@@ -23,9 +23,9 @@ import jwt, { JwtPayload } from "jsonwebtoken";
             next(new CustomError(`Invalid token`, 400));
             return
         }
-    } catch (err) {
-        next(new CustomError(`Something went wrong`, 500));
-            return
+    } catch (error) {
+        const err = error as Error;
+        next(new CustomError('Something went wrong',500,`${err.message}`));
     }
 }
 export default verify;
