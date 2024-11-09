@@ -5,7 +5,6 @@ import {PollResponse} from '../../models';
 import {Announcement} from '../../models';
 
 
-// controllers/announcement/poll.ts
 const submitPollResponse = async (req: CustomRequest, res: Response , next:NextFunction) => {
   const userId = req.user?._id;
 
@@ -24,7 +23,6 @@ const submitPollResponse = async (req: CustomRequest, res: Response , next:NextF
 
     await pollResponse.save();
 
-    // Update vote count for the selected option
     await Announcement.updateOne(
       { _id: announcementId, 'poll.options.optionText': selectedOption },
       { $inc: { 'poll.options.$.votes': 1 } }
