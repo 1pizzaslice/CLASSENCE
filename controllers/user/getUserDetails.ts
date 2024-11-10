@@ -28,7 +28,7 @@ const getUserDetails = async (req: CustomRequest, res: Response, next: NextFunct
 
         const createdClasses = [];
         const joinedClasses = [];
-        if(user.classRooms.length > 0){
+        if(user.classRooms && user.classRooms.length > 0){
             for (const classroom of user.classRooms) {
                 if (classroom.teacher._id.toString() === id.toString()) {
                     createdClasses.push({
