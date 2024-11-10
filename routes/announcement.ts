@@ -5,9 +5,9 @@ import { createAnnouncement, editAnnouncement ,deleteAnnouncement } from '../con
 import { fileUploadMiddleware } from "../middlewares";
 
 
-router.post('/announcement/create', fileUploadMiddleware, createAnnouncement);
-router.put('/announcement/edit/:id', fileUploadMiddleware, editAnnouncement); 
-router.delete('/announcement/delete/:id', deleteAnnouncement); 
+router.post('/create', fileUploadMiddleware, createAnnouncement);
+router.put('/edit/:id', fileUploadMiddleware, editAnnouncement); 
+router.delete('/delete/:id', deleteAnnouncement); 
 
 export default router
 

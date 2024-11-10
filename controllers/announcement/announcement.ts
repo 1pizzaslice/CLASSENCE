@@ -5,7 +5,11 @@ import fs from 'fs';
 import {cloudinary} from '../../config'
 
 const createAnnouncement = async (req: CustomRequest, res: Response , next:NextFunction) => {
-  const { title, description, poll, createdBy } = req.body;
+  const { title, description, poll } = req.body;
+  if(!title || !description || !req.user){
+    next(new CustomError('Title, description and createdBy is required', 400));
+    return;
+  }
   const files = req.files as Express.Multer.File[] | undefined;
   const mediaUrls = []; // cloudinary urls
 
@@ -34,13 +38,14 @@ const createAnnouncement = async (req: CustomRequest, res: Response , next:NextF
       description,
       media: mediaUrls,
       poll,
-      createdBy
+      createdBy:req.user?._id
   });
 
     await newAnnouncement.save();
     res.status(201).json({ message: 'Announcement created successfully', announcement: newAnnouncement });
   } catch (error) {
-    next(new CustomError('Failed to create announcement', 500));
+    const err = error as Error;
+    next(new CustomError('Failed to create announcement',500,`${err.message}`));
   }
 };
 
@@ -88,7 +93,8 @@ const editAnnouncement = async (req: CustomRequest, res: Response, next: NextFun
     await announcement.save();
     res.status(200).json({ message: 'Announcement updated successfully', announcement });
   } catch (error) {
-    next(new CustomError('Failed to update announcement', 500));
+    const err = error as Error;
+    next(new CustomError('Failed to update announcement',500,`${err.message}`));
   }
 };
 
@@ -114,7 +120,8 @@ const deleteAnnouncement = async (req: CustomRequest, res: Response, next: NextF
     await announcement.deleteOne();
     res.status(200).json({ message: 'Announcement deleted successfully' });
   } catch (error) {
-    next(new CustomError('Failed to delete announcement', 500));
+    const err = error as Error;
+    next(new CustomError('Failed to delete announcement',500,`${err.message}`));
   }
 };
 

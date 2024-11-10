@@ -52,7 +52,7 @@ const inviteStudent = async (req: CustomRequest, res: Response, next: NextFuncti
     if(classroom.privacy === 'private'){
         joiningCode = jwt.sign({email:student.email,classroomCode:classroom.code},process.env.JWT_SECRET as string,{expiresIn:'1d'});
     }
-    const inviteLink = `${process.env.FRONTEND_URL}/join/${joiningCode}`;
+    const inviteLink = `${process.env.FRONTEND_URL}/classroom/join/${joiningCode}`;
     const data = `
         <body style="margin: 0; padding: 0; width: 100%; font-family: Arial, sans-serif; background-color: #f4f4f4;">
         <div style="max-width: 600px; width: 100%; margin: 20px auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 10px; background-color: #ffffff; box-sizing: border-box;">
