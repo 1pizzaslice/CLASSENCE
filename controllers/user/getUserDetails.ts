@@ -15,6 +15,10 @@ const getUserDetails = async (req: CustomRequest, res: Response, next: NextFunct
         .populate({
             path: "classRooms",
             select: "name subject _id teacher code",
+            populate: {
+                path: "teacher",
+                select: "name _id", 
+            },
         })
         .lean() as IUser & {classRooms:IClassroom[]};
         if (!user) {
@@ -24,23 +28,25 @@ const getUserDetails = async (req: CustomRequest, res: Response, next: NextFunct
 
         const createdClasses = [];
         const joinedClasses = [];
-        for (const classroom of user.classRooms) {
-            if (classroom.teacher.toString() === id.toString()) {
-                createdClasses.push({
-                    _id: classroom._id,
-                    name: classroom.name,
-                    subject: classroom.subject,
-                    teacher: classroom.teacher,
-                    code: classroom.code,
-                });
-            } else {
-                joinedClasses.push({
-                    _id: classroom._id,
-                    name: classroom.name,
-                    subject: classroom.subject,
-                    teacher: classroom.teacher,
-                    code: classroom.code,
-                });
+        if(user.classRooms.length > 0){
+            for (const classroom of user.classRooms) {
+                if (classroom.teacher._id.toString() === id.toString()) {
+                    createdClasses.push({
+                        _id: classroom._id,
+                        name: classroom.name,
+                        subject: classroom.subject,
+                        teacher: classroom.teacher,
+                        code: classroom.code,
+                    });
+                } else {
+                    joinedClasses.push({
+                        _id: classroom._id,
+                        name: classroom.name,
+                        subject: classroom.subject,
+                        teacher: classroom.teacher,
+                        code: classroom.code,
+                    });
+                }
             }
         }
         res.status(200).json({
