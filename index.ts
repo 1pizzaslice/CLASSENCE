@@ -1,6 +1,6 @@
 import dotenv from "dotenv"; 
 dotenv.config();
-import {authRoute,classroomRoute} from './routes/';
+import {authRoute,classroomRoute,announcementRoute,userRoute} from './routes/';
 import  connectDB  from './db/connect';
 import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
@@ -28,7 +28,9 @@ app.use(cors());
 app.use(express.json()); 
 app.use(express.urlencoded({ extended: true }));
 app.use('/api/auth',authRoute);
+app.use('/api/user',verify,userRoute);
 app.use("/api/classroom",verify,classroomRoute);
+app.use("/api/announcement",verify,announcementRoute);
 
 app.use('*', (req: Request, res: Response,next:NextFunction) => {
     const error = new CustomError('Resource not found!!!!', 404);

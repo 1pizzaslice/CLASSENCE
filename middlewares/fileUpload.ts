@@ -5,6 +5,7 @@ const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     cb(null, 'uploads/');  // the file upload destination
   },
+  //TODO:fix if uploads folder is not present
   filename: (req, file, cb) => {
     cb(null, `${Date.now()}-${file.originalname}`);
   }
