@@ -35,7 +35,7 @@ const getClassroomDetails = async (req: CustomRequest, res: Response, next: Next
             next(new CustomError('You are not authorized to view this classroom',403));
             return;
         }
-        res.status(200).json({ classroom });
+        res.status(200).json({success:true,message:"Classroom details fetched successfully!", classroom });
     } catch (error) {
         const err = error as Error;
         next(new CustomError('Failed to get classroom details', 500, `${err.message}`));
