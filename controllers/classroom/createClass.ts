@@ -10,6 +10,7 @@ function generateUniqueCode(length = 6): string {
 
 const createClass = async (req: CustomRequest, res: Response, next: NextFunction) => {
   const { name,subject,privacy } = req.body;
+  console.log(req.body);
   if (!name || !subject || !privacy) {
     next(new CustomError('Name, Subject or privacy are required!', 400));
     return;
