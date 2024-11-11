@@ -12,14 +12,18 @@ type RequestBody = {
 }
 export const registerUser = async (req: Request, res: Response,next:NextFunction) => {
     const { name, email, password }: RequestBody = req.body;
-
-    const emailExist = await User.findOne({ email })
+    if (!name || !email || !password) {
+        next(new CustomError('Name, email and password is required', 400));
+        return;
+    }
+    const lowerEmail = email.toLowerCase();
+    const emailExist = await User.findOne({ email:lowerEmail })
     if (emailExist){
         if(emailExist.isVerified){
-            next(new CustomError('Email allready exists !!', 400));
+            next(new CustomError('Email already exists !!', 400));
             return;
         }
-    await User.deleteOne({ email });
+    await User.deleteOne({ email:lowerEmail });
     }
 
     // hash password
@@ -29,7 +33,7 @@ export const registerUser = async (req: Request, res: Response,next:NextFunction
     // store user in db
     const user = new User({
         name: name,
-        email: email,
+        email: lowerEmail,
         password: hashedPassword
     });
     try {
@@ -42,8 +46,9 @@ export const registerUser = async (req: Request, res: Response,next:NextFunction
                 id: user._id, 
             },
         });
-    } catch (err) {
-        next(new CustomError('Something went wrong', 500));
+    } catch (error) {
+        const err = error as Error;
+        next(new CustomError('Something went wrong',500,`${err.message}`));
     }
 }
 
@@ -51,7 +56,12 @@ export const loginUser = async (req: CustomRequest, res: Response , next: NextFu
     // create & assign a JWT
     try {
         const { email , password } = req.body ;
-        const user = await User.findOne({ email})
+        if (!email || !password) {
+            next(new CustomError('Email and password is required', 400));
+            return;
+        }
+        const lowerEmail = email.toLowerCase();
+        const user = await User.findOne({ email:lowerEmail})
         if (!user) {
             next(new CustomError('User not found', 400));
             return;
@@ -65,14 +75,14 @@ export const loginUser = async (req: CustomRequest, res: Response , next: NextFu
             req.user = { _id: user._id };   
         }
         else{
-            next(new CustomError('Invalid Email or Password', 400));
+            next(new CustomError('Incorrect Password', 400));
             return;
         }
         
-        const token = jwt.sign({ id: req.user?._id }, process.env.JWT_SECRET as string , {
-            expiresIn: process.env.JWT_LIFETIME
+        const token = jwt.sign({ _id: req.user?._id }, process.env.JWT_SECRET as string , {
+            expiresIn: '1h'
         });
-        const refreshToken = jwt.sign({ id: req.user?._id }, process.env.JWT_SECRET as string , {
+        const refreshToken = jwt.sign({ _id: req.user?._id }, process.env.JWT_SECRET as string , {
             expiresIn: '1d'
         });
     
@@ -83,7 +93,8 @@ export const loginUser = async (req: CustomRequest, res: Response , next: NextFu
             refreshToken: refreshToken,
         });
     } catch (error) {
-        next(new CustomError('Something went wrong', 500));
+        const err = error as Error;
+        next(new CustomError('Something went wrong',500,`${err.message}`));
     }
 
 }

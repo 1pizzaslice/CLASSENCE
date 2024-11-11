@@ -36,7 +36,8 @@ const verifyOtp = async (req: CustomRequest, res: Response,next:NextFunction) =>
         message: 'Email verified successfully!',
     });
   } catch (error) {
-    next(new CustomError('Something went wrong!', 500));
+    const err = error as Error;
+    next(new CustomError('Something went wrong',500,`${err.message}`));
   }
 };
 
@@ -53,13 +54,22 @@ const resendOtp = async(req: CustomRequest, res: Response,next:NextFunction) => 
       next(new CustomError('Email already verified!', 400));
       return;
     }
+
+    const latestOtp = await Otp.findOne({ email }).sort({ createdAt: -1 });
+    const currentTime = Date.now();
+    const thirtySeconds = 60 * 1000; 
+    if (latestOtp && currentTime - latestOtp.createdAt.getTime() < thirtySeconds) {
+      next(new CustomError('OTP requests are limited to one per 30 seconds.', 429));
+      return;
+    }
     sendOtpEmail(req, res,next);
     res.status(200).json({
       success: true,
       message: 'OTP sent to your email!',
     });
   } catch (error) {
-    next(new CustomError('Something went wrong!', 500));
+    const err = error as Error;
+    next(new CustomError('Something went wrong',500,`${err.message}`));
   }
 }
 
@@ -83,26 +93,32 @@ const sendOtpEmail = async (req: CustomRequest, res:Response,next:NextFunction) 
       expiresAt: new Date(Date.now() + 10 * 60 * 1000)
     });
     await otpData.save();
-    const data =
-      `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 10px;">
-        <h2 style="color: #333; text-align: center;">Email Verification Code</h2>
-        <p>Hello ${user.name},</p>
-        <p>Thank you for signing up! To complete the verification of your email address, please use the One-Time Password (OTP) below:</p>
-        <div style="text-align: center; margin: 20px 0;">
-          <span style="font-size: 24px; font-weight: bold; color: #007bff;">${otp}</span>
-        </div>
-        <p>This OTP is valid for the next 10 minutes. Please do not share it with anyone.</p>
-        <p>If you did not request this verification, please disregard this email.</p>
-        <p>Best regards,<br>Classence</p>
-        <hr style="border: 0; border-top: 1px solid #ddd; margin: 30px 0;">
-        <p style="font-size: 12px; color: #888; text-align: center;">If you have any issues, feel free to contact our support team.</p>
-      </div>
-      `;    
+      const data = `
+      <body style="margin: 0; padding: 0; width: 100%; font-family: Arial, sans-serif;">
+          <div style="max-width: 600px; width: 100%; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 10px; background-color: #f9fafb; box-sizing: border-box;">
+              <img src="https://i.ibb.co/41hPJtW/logo.png" alt="Logo" style="width: 80%; max-width: 150px; display: block; margin: 0 auto;">
+              <p style="color: #555; font-size: 18px; line-height: 1.5; text-align: center;">&nbsp;Hello ${user.name},</p>
+              <p style="color: #555; font-size: 16px; line-height: 1.6; text-align: center;">Thank you for signing up for Classence! To verify your email address, please enter the One-Time Password (OTP) below:</p>
+              <div style="text-align: center; margin: 20px 0;">
+                  <span style="font-size: 24px; font-weight: bold; color: #066769;">${otp}</span>
+              </div>
+              <p style="color: #555; font-size: 16px; line-height: 1.6; text-align: center;">This OTP is valid for the next 10 minutes. Please keep it secure and do not share it with anyone.</p>
+              <p style="color: #555; font-size: 16px; line-height: 1.6; text-align: center;">If you did not request this verification, please disregard this email.</p>
+              <p style="color: #555; font-size: 16px; line-height: 1.6; text-align: center;">Best regards,<br>Classence Team</p>
+              <hr style="border: 0; border-top: 1px solid #e0e0e0; margin: 30px 0;">
+              <p style="font-size: 13px; color: #a1a1a1; text-align: center; line-height: 1.5;">
+                  If you encounter any issues, please contact our support team at 
+                  <a href="mailto:classence.help@gmail.com" style="color: #066769; text-decoration: none;">classence.help@gmail.com</a>.
+              </p>
+          </div>
+      </body>
+      `;
 
-    sendEmail(user.email, 'Your OTP for email verification', data);
+    sendEmail(user.email, 'Your OTP for email verification', data)
+      .catch((error) => {console.log("Error sending email: ", error);});
   } catch (error) {
-    next(new CustomError('Something went wrong!', 500));
+    const err = error as Error;
+    next(new CustomError('Something went wrong',500,`${err.message}`));
   }
 };
     

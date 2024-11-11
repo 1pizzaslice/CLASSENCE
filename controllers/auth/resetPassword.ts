@@ -35,30 +35,52 @@ export const requestPasswordReset = async (req: Request, res: Response,next:Next
     user.resetPasswordExpires = new Date(Date.now() + 3600000); 
     user.lastPasswordResetRequest = new Date(now);
     await user.save();
-    const data =`
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 10px;">
-        <h2 style="color: #333; text-align: center;">Password Reset Request</h2>
-        <p>Hi ${user.name},</p>
-        <p>You requested a password reset for your account. Please click the button below to reset your password:</p>
-        <div style="text-align: center; margin: 20px 0;">
-          <a href="${resetUrl}" style="background-color: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; font-size: 16px;">Reset Password</a>
+    const data = `
+    <body style="margin: 0; padding: 0; width: 100%; font-family: Arial, sans-serif; background-color: #f4f4f4;">
+      <div style="max-width: 600px; width: 100%; margin: 20px auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 10px; background-color: #ffffff; box-sizing: border-box;">
+        <div style="text-align: center; margin-bottom: 30px;">
+          <img src="https://i.ibb.co/41hPJtW/logo.png" alt="Logo" style="width: 120px; max-width: 100%;">
         </div>
-        <p>If you didn't request this password reset, you can ignore this email.</p>
-        <p>Best regards,<br>Classence</p>
-        <hr style="border: 0; border-top: 1px solid #ddd; margin: 30px 0;">
-        <p style="font-size: 12px; color: #888; text-align: center;">If you're having trouble clicking the button, copy and paste the URL below into your web browser:</p>
-        <p style="font-size: 12px; color: #007bff; word-break: break-all; text-align: center;"><a href="${resetUrl}" style="color: #007bff;">${resetUrl}</a></p>
+        <p style="color: #333333; font-size: 18px; line-height: 1.5; text-align: center; margin: 0 20px;">
+          Hello ${user.name},
+        </p>
+        <p style="color: #555555; font-size: 16px; line-height: 1.6; text-align: center; margin: 20px 20px;">
+          We received a request to reset your password. Click the button below to proceed:
+        </p>
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="${resetUrl}" style="background-color: #066769; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; font-size: 16px;">
+            Reset Password
+          </a>
+        </div>
+        <p style="color: #555555; font-size: 16px; line-height: 1.6; text-align: center; margin: 20px 20px;">
+          If you didn't request this, please ignore this email. Your account will remain secure.
+        </p>
+        <p style="color: #555555; font-size: 16px; line-height: 1.6; text-align: center; margin: 20px 20px;">
+          Best regards,<br>
+          Classence Team
+        </p>
+        <hr style="border: none; border-top: 1px solid #e0e0e0; margin: 30px 0;">
+        <p style="font-size: 13px; color: #a1a1a1; text-align: center; margin: 20px;">
+          If you're having trouble clicking the button, copy and paste the URL below into your web browser:
+        </p>
+        <p style="font-size: 13px; color: #066769; word-break: break-all; text-align: center; margin: 0;">
+          <a href="${resetUrl}" style="color: #066769; text-decoration: none;">${resetUrl}</a>
+        </p>
       </div>
-    `
+    </body>
+  `;
+
     
-    sendEmail(user.email, 'Password Reset Request', data);
+    sendEmail(user.email, 'Password Reset Request', data)
+      .catch((error)=>{console.log("Error sending email: ", error);});
   
     res.status(200).json({ 
       success: true, 
       message: 'Password reset link has been sent to your email! Please check your inbox, it should arrive within a few seconds.'
     });
   } catch (error) {
-    next(new CustomError('Something went wrong!', 500));
+    const err = error as Error;
+    next(new CustomError('Something went wrong',500,`${err.message}`));
   }
 };
 
@@ -90,11 +112,12 @@ export const resetPassword = async (req: Request, res: Response,next:NextFunctio
     user.resetPasswordToken = undefined; 
     user.resetPasswordExpires = undefined;
     user.password = hashedPassword;
+    //TODO : LOGOUT USER FROM ALL DEVICES.
     await user.save();
 
     res.status(200).json({ success: true, message: 'Password reset successfully' });    
   } catch (error) {
-    console.log( error);
-    next(new CustomError('Something went wrong!', 500));
+    const err = error as Error;
+    next(new CustomError('Something went wrong',500,`${err.message}`));
   }
 };
