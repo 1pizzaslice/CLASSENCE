@@ -1,4 +1,4 @@
-import { Document, Types , Schema , model } from 'mongoose';
+import mongoose, { Document, Types , Schema } from 'mongoose';
 
 export interface ISubmission {
     student_id: Types.ObjectId;
@@ -70,4 +70,5 @@ const assignmentSchema = new Schema<IAssignment>({
     },
 }, { timestamps: true });
 
-export const Assignment = model<IAssignment>('Assignment', assignmentSchema);
+const Assignment = mongoose.model<IAssignment>('Assignment', assignmentSchema);
+export default Assignment;
