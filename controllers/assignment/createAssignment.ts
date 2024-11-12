@@ -1,7 +1,7 @@
 import e, { Response, NextFunction } from "express";
 import { CustomError, CustomRequest } from "../../types";
 import {Assignment} from '../../models';
-import fs from 'fs';
+import fs from 'fs/promises';
 import {cloudinary} from '../../config'
 
 const createAssignment = async (req: CustomRequest, res: Response, next: NextFunction) => {
@@ -24,11 +24,11 @@ const createAssignment = async (req: CustomRequest, res: Response, next: NextFun
   
           mediaUrls.push(result.secure_url);
 
-          fs.unlink(file.path, (err) => {
-            if (err) {
-              console.error(`Failed to delete local file: ${file.path}`, err);
-            }
-          });
+          try {
+            await fs.unlink(file.path); // Asynchronous deletion of local file
+          } catch (err) {
+            console.error(`Failed to delete local file: ${file.path}`, err);
+          }
         }
       }
   
@@ -42,7 +42,11 @@ const createAssignment = async (req: CustomRequest, res: Response, next: NextFun
   
       await newAssignment.save();
   
-      res.status(201).json({ message: "Assignment created successfully", assignment: newAssignment });
+      res.status(201).json({ 
+        success: true,
+        message: "Assignment created successfully",
+        assignment: newAssignment });
+        
     } catch (error) {
       const err = error as Error;
       next(new CustomError("Failed to create assignment", 500, `${err.message}`));
