@@ -14,7 +14,7 @@ const getUserDetails = async (req: CustomRequest, res: Response, next: NextFunct
         const user = await User.findById(id, "name _id classRooms")
         .populate({
             path: "classRooms",
-            select: "name subject _id teacher code",
+            select: "name subject _id teacher code students",
             populate: {
                 path: "teacher",
                 select: "name _id", 
@@ -28,16 +28,17 @@ const getUserDetails = async (req: CustomRequest, res: Response, next: NextFunct
 
         const createdClasses = [];
         const joinedClasses = [];
-        //TODO: SENT NO. STUDENTS IN CLASSROOM
         if(user.classRooms && user.classRooms.length > 0){
             for (const classroom of user.classRooms) {
                 if (classroom.teacher._id.toString() === id.toString()) {
+                    // console.log(classroom)
                     createdClasses.push({
                         _id: classroom._id,
                         name: classroom.name,
                         subject: classroom.subject,
                         teacher: classroom.teacher,
                         code: classroom.code,
+                        noOfStudents: classroom.students.length,
                     });
                 } else {
                     joinedClasses.push({
@@ -46,6 +47,7 @@ const getUserDetails = async (req: CustomRequest, res: Response, next: NextFunct
                         subject: classroom.subject,
                         teacher: classroom.teacher,
                         code: classroom.code,
+                        noOfStudents: classroom.students.length,
                     });
                 }
             }
@@ -62,6 +64,7 @@ const getUserDetails = async (req: CustomRequest, res: Response, next: NextFunct
         });
     } catch (error) {
         const err = error as Error;
+        // console.log(err);
         next(new CustomError('Failed to get user details', 500, `${err.message}`));
     }
 }

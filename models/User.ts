@@ -12,6 +12,7 @@ export interface IUser extends Document {
     classRooms: string[];
     createdAt: Date;
     updatedAt: Date;
+    version:number;
 }
 
 const UserSchema: Schema = new Schema({
@@ -49,7 +50,11 @@ const UserSchema: Schema = new Schema({
     classRooms:[{
         type:Schema.Types.ObjectId,
         ref:'Classroom'
-    }]
+    }],
+    version:{
+        type:Number,
+        default:0
+    }
 
 },{timestamps:true})
 

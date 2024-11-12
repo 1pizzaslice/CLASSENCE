@@ -79,10 +79,10 @@ export const loginUser = async (req: CustomRequest, res: Response , next: NextFu
             return;
         }
         
-        const token = jwt.sign({ _id: req.user?._id }, process.env.JWT_SECRET as string , {
+        const token = jwt.sign({ _id: req.user?._id,version:user.version }, process.env.JWT_SECRET as string , {
             expiresIn: '1h'
         });
-        const refreshToken = jwt.sign({ _id: req.user?._id }, process.env.JWT_SECRET as string , {
+        const refreshToken = jwt.sign({ _id: req.user?._id,version:user.version }, process.env.JWT_SECRET as string , {
             expiresIn: '1d'
         });
     

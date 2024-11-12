@@ -15,9 +15,9 @@ import jwt, { JwtPayload } from "jsonwebtoken";
         return
     }
     try {
-        const verify = jwt.verify(token, process.env.JWT_SECRET as string) as JwtPayload & { _id: string };
-        if (verify && '_id' in verify) {
-            req.user = { _id: verify._id };
+        const verify = jwt.verify(token, process.env.JWT_SECRET as string) as JwtPayload & { _id: string , version:number };
+        if (verify && '_id' in verify && 'version' in verify) {
+            req.user = { _id: verify._id, };
             next();
         } else {
             next(new CustomError(`Invalid token`, 400));
@@ -25,7 +25,7 @@ import jwt, { JwtPayload } from "jsonwebtoken";
         }
     } catch (error) {
         const err = error as Error;
-        next(new CustomError('Something went wrong',500,`${err.message}`));
+        next(new CustomError(`Invalid token`, 400,`${err.message}`));
     }
 }
 export default verify;
