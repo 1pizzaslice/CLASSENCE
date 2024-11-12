@@ -15,7 +15,7 @@ app.set('trust proxy', 1);   // to resolve nginx proxy issue
 
 const limiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 min 
-    max: 200,                 // max 100 req per ip //TODO:CHANGE MAX REQ TO 100 AFTER DEVELOPMENT
+    max: 10000,                 // max 100 req per ip //TODO:CHANGE MAX REQ TO 100 AFTER DEVELOPMENT
     message: "Too many requests from this IP, please try again later.",
     standardHeaders: true, 
     legacyHeaders: false, 
