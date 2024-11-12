@@ -2,7 +2,7 @@ import mongoose, { Document, Types , Schema } from 'mongoose';
 
 export interface ISubmission {
     student_id: Types.ObjectId;
-    media?: string;
+    media?: string[];
     version: number;
     history: string[];
     isGraded: boolean;
@@ -12,7 +12,7 @@ export interface ISubmission {
 export interface IAssignment extends Document {
     name: string;
     description: string;
-    media?: string;
+    media?: string[];
     dueDate: Date;
     submissions: ISubmission[];
     createdAt: Date;
@@ -25,9 +25,9 @@ const submissionSchema = new Schema<ISubmission>({
         ref: 'User',
         required: true 
     },
-    media: {
+    media: [{
         type: String 
-    },
+    }],
     version: { 
         type: Number, 
         default: 1 
@@ -57,9 +57,9 @@ const assignmentSchema = new Schema<IAssignment>({
         type: String, 
         required: true 
     },
-    media: { 
+    media: [{ 
         type: String 
-    },
+    }],
     dueDate: { 
         type: Date, 
         required: true 
