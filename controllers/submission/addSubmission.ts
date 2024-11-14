@@ -2,6 +2,7 @@ import { Response, NextFunction } from "express";
 import { CustomError, CustomRequest } from "../../types";
 import { Assignment } from "../../models"; 
 import { Types } from "mongoose";
+import type { ISubmission } from "../../models/assignments";
 
 const addSubmission = async (req: CustomRequest, res: Response, next: NextFunction) => {
   const { id } = req.params;  
@@ -29,9 +30,9 @@ const addSubmission = async (req: CustomRequest, res: Response, next: NextFuncti
       return next(new CustomError("You have already submitted this assignment", 400));
     }
 
-    const newSubmission = {
+    const newSubmission : ISubmission = {
       student_id: studentId,  
-      media: media || [], 
+      media: Array.isArray(media) ? media : [],
       version: 1, 
       history: [`Submission version 1`], 
       isGraded: false,

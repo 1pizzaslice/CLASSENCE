@@ -4,9 +4,9 @@ import { createClass,joinClass,deleteClass,inviteStudent,removeStudent,getClassr
 
 router.post('/create', createClass);
 router.post('/join', joinClass);
-router.delete('/delete', deleteClass);
+router.post('/delete', deleteClass);
 router.post('/invite', inviteStudent);
-router.delete('/remove', removeStudent);
+router.post('/remove', removeStudent);
 router.get('/details', getClassroomDetails);
 
 
