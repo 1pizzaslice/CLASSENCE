@@ -34,7 +34,7 @@ const getSubmissionById = async (req: CustomRequest, res: Response, next: NextFu
     }
 
     const submission = assignment.submissions.find(
-      (sub) => sub.student_id.toString() === submissionId
+      (sub) => sub._id?.toString() === submissionId
     );
 
     if (!submission) {

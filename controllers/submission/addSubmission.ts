@@ -23,7 +23,7 @@ const addSubmission = async (req: CustomRequest, res: Response, next: NextFuncti
     }
 
     const existingSubmission = assignment.submissions.find(
-      (submission) => submission.student_id.toString() === studentId.toString()
+      (submission) => submission._id?.toString() === studentId.toString()
     );
 
     if (existingSubmission) {
@@ -36,6 +36,7 @@ const addSubmission = async (req: CustomRequest, res: Response, next: NextFuncti
       version: 1, 
       history: [`Submission version 1`], 
       isGraded: false,
+      isDeleted: false,
     };
 
     assignment.submissions.push(newSubmission);

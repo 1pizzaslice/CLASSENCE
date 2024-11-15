@@ -1,12 +1,14 @@
 import mongoose, { Document, Types , Schema } from 'mongoose';
 
 export interface ISubmission {
+    _id?: Types.ObjectId;
     student_id: Types.ObjectId;
     media?: string[];
     version: number;
     history: string[];
     isGraded: boolean;
     grade?: string;
+    isDeleted: boolean;
 }
 
 export interface IAssignment extends Document {
@@ -20,6 +22,10 @@ export interface IAssignment extends Document {
 }
 
 const submissionSchema = new Schema<ISubmission>({
+    _id: { 
+        type: Schema.Types.ObjectId, 
+        auto: true
+    },
     student_id: {
         type: Schema.Types.ObjectId,
         ref: 'User',

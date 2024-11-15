@@ -22,7 +22,7 @@ const updateSubmission = async (req: CustomRequest, res: Response, next: NextFun
     }
 
     const submissionIndex = assignment.submissions.findIndex(
-      (submission) => submission.student_id.toString() === studentId.toString()
+      (submission) => submission._id?.toString() === studentId.toString()
     );
 
     if (submissionIndex === -1) {
