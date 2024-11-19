@@ -1,3 +1,2 @@
-export {default as addSubmission} from './addSubmission';
-export {default as updatedSubmission} from './updateSubmission'
-export {getSubmissionById, getAllSubmissions} from './getSubmission';
+export {default as createOrUpdateSubmission} from "./createAndUpdateSubmission";
+export {default as gradeSubmission} from "./gradeSubmission";
