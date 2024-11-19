@@ -1,10 +1,10 @@
 import { Response, NextFunction } from "express";
 import { CustomError, CustomRequest } from "../../types";
-import { Assignment } from "../../models";
+import { Assignment, User,Classroom } from "../../models";
 import { cloudinary } from "../../config";
 
 const deleteAssignment = async (req: CustomRequest, res: Response, next: NextFunction) => {
-  const { id } = req.params;
+  const { id , code } = req.query;
 
   try {
 
@@ -12,9 +12,18 @@ const deleteAssignment = async (req: CustomRequest, res: Response, next: NextFun
       return next(new CustomError("Unauthorized access", 401));
     }
 
-    const assignment = await Assignment.findById(id);
+    const [assignment,user,classroom] = await Promise.all([Assignment.findById(id),User.findById(req.user._id),Classroom.findOne({code})]);
     if (!assignment) {
       return next(new CustomError("Assignment not found", 404));
+    }
+    if(!user){
+      return next(new CustomError('User not found',404));
+    }
+    if(!classroom || classroom.isDeleted){
+      return next(new CustomError('Classroom not found',404));
+    }
+    if(!user.classRooms.includes(classroom._id) || classroom.teacher.toString() !== user._id.toString()){
+      return next(new CustomError('You are not authorized to delete assignment in this classroom',403));
     }
 
     if (assignment.media && assignment.media.length > 0) {
