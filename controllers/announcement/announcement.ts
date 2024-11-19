@@ -1,19 +1,32 @@
 import e, { Response, NextFunction } from "express";
 import { CustomError, CustomRequest } from "../../types";
-import {Announcement} from '../../models';
+import {Announcement, Classroom, User} from '../../models';
 import fs from 'fs';
 import {cloudinary} from '../../config'
 
 const createAnnouncement = async (req: CustomRequest, res: Response , next:NextFunction) => {
-  const { title, description, poll } = req.body;
-  if(!title || !description || !req.user){
-    next(new CustomError('Title, description and createdBy is required', 400));
+  const { title, description, poll,code } = req.body;
+  if(!title || !description || !req.user || !code){
+    next(new CustomError('Title, description, code is required', 400));
     return;
   }
   const files = req.files as Express.Multer.File[] | undefined;
   const mediaUrls = []; // cloudinary urls
 
   try {
+    const [user,classroom] = await Promise.all([User.findById(req.user._id),Classroom.findOne({code})]);
+    if(!user){
+      next(new CustomError('User not found',404));
+      return;
+    }
+    if(!classroom || classroom.isDeleted){
+      next(new CustomError('Classroom not found',404));
+      return;
+    }
+    if(!user.classRooms.includes(classroom._id) || classroom.teacher.toString() !== user._id.toString()){
+      next(new CustomError('You are not authorized to create announcement in this classroom',403));
+      return;
+    }
     
     if (files && files.length > 0) {
       for (const file of files) {
@@ -38,11 +51,12 @@ const createAnnouncement = async (req: CustomRequest, res: Response , next:NextF
       description,
       media: mediaUrls,
       poll,
+      classroom: classroom._id,
       createdBy:req.user?._id
   });
-
-    await newAnnouncement.save();
-    res.status(201).json({ message: 'Announcement created successfully', announcement: newAnnouncement });
+  
+    await Promise.all([newAnnouncement.save(),classroom.updateOne({$push:{announcements:newAnnouncement._id}})]);
+    res.status(201).json({success:true, message: 'Announcement created successfully', announcement: newAnnouncement });
   } catch (error) {
     const err = error as Error;
     next(new CustomError('Failed to create announcement',500,`${err.message}`));
@@ -51,14 +65,32 @@ const createAnnouncement = async (req: CustomRequest, res: Response , next:NextF
 
 const editAnnouncement = async (req: CustomRequest, res: Response, next: NextFunction) => {
   const { id } = req.params;
-  const { title, description, poll } = req.body;
+  const { title, description, poll,code } = req.body;
+  if(!title || !description || !code){
+    next(new CustomError('Title, description, code is required', 400));
+    return;
+  }
+
   const files = req.files as Express.Multer.File[] | undefined;
 
   try {
 
-    const announcement = await Announcement.findById(id);
-    if (!announcement) {
-      return next(new CustomError('Announcement not found', 404));
+    const [user,announcement,classroom] = await Promise.all([User.findById(req.user?._id),Announcement.findById(id),Classroom.findOne({code})]);
+    if(!user){
+      next(new CustomError('User not found',404));
+      return;
+    }
+    if(!announcement){
+      next(new CustomError('Announcement not found',404));
+      return;
+    }
+    if(!classroom || classroom.isDeleted){
+      next(new CustomError('Classroom not found',404));
+      return;
+    }
+    if(!user.classRooms.includes(classroom._id) || classroom.teacher.toString() !== user._id.toString()){
+      next(new CustomError('You are not authorized to edit announcement in this classroom',403));
+      return;
     }
 
     if (title) announcement.title = title;
@@ -91,7 +123,7 @@ const editAnnouncement = async (req: CustomRequest, res: Response, next: NextFun
     }
 
     await announcement.save();
-    res.status(200).json({ message: 'Announcement updated successfully', announcement });
+    res.status(200).json({success:true, message: 'Announcement updated successfully', announcement });
   } catch (error) {
     const err = error as Error;
     next(new CustomError('Failed to update announcement',500,`${err.message}`));
@@ -101,11 +133,29 @@ const editAnnouncement = async (req: CustomRequest, res: Response, next: NextFun
 
 const deleteAnnouncement = async (req: CustomRequest, res: Response, next: NextFunction) => {
   const { id } = req.params;
+  const { code } = req.body;
+  if(!code){
+    next(new CustomError('Code is required', 400));
+    return;
+  }
 
   try {
-    const announcement = await Announcement.findById(id);
-    if (!announcement) {
-      return next(new CustomError('Announcement not found', 404));
+    const [user,announcement,classroom] = await Promise.all([User.findById(req.user?._id),Announcement.findById(id),Classroom.findOne({code})]);
+    if(!user){
+      next(new CustomError('User not found',404));
+      return;
+    }
+    if(!announcement){
+      next(new CustomError('Announcement not found',404));
+      return;
+    }
+    if(!classroom || classroom.isDeleted){
+      next(new CustomError('Classroom not found',404));
+      return;
+    }
+    if(!user.classRooms.includes(classroom._id) || classroom.teacher.toString() !== user._id.toString()){
+      next(new CustomError('You are not authorized to delete announcement in this classroom',403));
+      return;
     }
 
     if (announcement.media && announcement.media.length > 0) {
@@ -117,8 +167,8 @@ const deleteAnnouncement = async (req: CustomRequest, res: Response, next: NextF
       }
     }
 
-    await announcement.deleteOne();
-    res.status(200).json({ message: 'Announcement deleted successfully' });
+    await Promise.all([announcement.deleteOne(),classroom.updateOne({$pull:{announcements:announcement._id}})]);
+    res.status(200).json({success:true, message: 'Announcement deleted successfully' });
   } catch (error) {
     const err = error as Error;
     next(new CustomError('Failed to delete announcement',500,`${err.message}`));

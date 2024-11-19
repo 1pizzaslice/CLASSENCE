@@ -13,6 +13,8 @@ export interface IUser extends Document {
     createdAt: Date;
     updatedAt: Date;
     version:number;
+    recentClasses:string[];
+    recentGrades:string[];
 }
 
 const UserSchema: Schema = new Schema({
@@ -54,7 +56,15 @@ const UserSchema: Schema = new Schema({
     version:{
         type:Number,
         default:0
-    }
+    },
+    recentClasses:[{
+        type:Schema.Types.ObjectId,
+        ref:'Classroom'
+    }],
+    recentGrades:[{
+        type:Schema.Types.ObjectId,
+        ref:'Submission'
+    }]
 
 },{timestamps:true})
 
