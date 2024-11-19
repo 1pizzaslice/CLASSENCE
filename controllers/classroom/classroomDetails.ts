@@ -13,16 +13,22 @@ const getClassroomDetails = async (req: CustomRequest, res: Response, next: Next
         next(new CustomError('Code is required', 400));
         return;
     }
-
-
-
     try {
-        const [classroom,user] = await Promise.all([Classroom.findOne({ code })
-            .populate([
-                { path: "teacher", select: "name _id" },          
-                { path: "students", select: "name _id" }  
-            ]),
-            User.findById(id)]);
+        const [classroom, user] = await Promise.all([
+            Classroom.findOne({ code })
+                .select("name code subject teacher students announcements createdAt") 
+                .populate([
+                { path: "teacher", select: "name" },
+                { path: "students", select: "name" },
+                {
+                    path: "announcements",
+                    select: "title description media createdAt",
+                    options: { sort: { createdAt: -1 } },
+                },
+                ]),
+            User.findById(id),
+        ]);
+        
         if(!user){
             next(new CustomError('User not found',404));
             return;
@@ -35,6 +41,13 @@ const getClassroomDetails = async (req: CustomRequest, res: Response, next: Next
             next(new CustomError('You are not authorized to view this classroom',403));
             return;
         }
+        if(!user.recentClasses){
+            user.recentClasses = [];
+        }
+        user.recentClasses = user.recentClasses.filter(id => id.toString() !== classroom._id.toString());
+        user.recentClasses.unshift(classroom._id);
+        user.recentClasses = user.recentClasses.slice(0, 3);
+        await user.save();
         res.status(200).json({success:true,message:"Classroom details fetched successfully!", classroom });
     } catch (error) {
         const err = error as Error;

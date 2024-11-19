@@ -1,20 +1,33 @@
 import e, { Response, NextFunction } from "express";
 import { CustomError, CustomRequest } from "../../types";
-import {Assignment} from '../../models';
+import {Assignment,User,Classroom} from '../../models';
 import fs from 'fs/promises';
 import {cloudinary} from '../../config'
 
 const createAssignment = async (req: CustomRequest, res: Response, next: NextFunction) => {
-    const { name, description, dueDate } = req.body;
+    const { name, description, dueDate,code } = req.body;
   
-    if (!name || !description || !dueDate || !req.user) {
-      return next(new CustomError("Name, description, dueDate, and createdBy are required", 400));
+    if (!name || !description || !dueDate || !req.user || !code) {
+      return next(new CustomError("Name, description, dueDate, code and createdBy are required", 400));
     }
   
     const files = req.files as Express.Multer.File[] | undefined;
     const mediaUrls: string[] = []; 
   
     try {
+      const [user,classroom] = await Promise.all([User.findById(req.user._id),Classroom.findOne({code})]);
+      if(!user){
+        next(new CustomError('User not found',404));
+        return;
+      }
+      if(!classroom || classroom.isDeleted){
+        next(new CustomError('Classroom not found',404));
+        return;
+      }
+      if(!user.classRooms.includes(classroom._id) || classroom.teacher.toString() !== user._id.toString()){
+        next(new CustomError('You are not authorized to create assignment in this classroom',403));
+        return;
+      }
       if (files && files.length > 0) {
         for (const file of files) {
           const result = await cloudinary.uploader.upload(file.path, {
@@ -38,9 +51,10 @@ const createAssignment = async (req: CustomRequest, res: Response, next: NextFun
         media: mediaUrls,
         dueDate,
         createdBy: req.user._id,
+        classroom: classroom._id,
       });
   
-      await newAssignment.save();
+      await Promise.all([newAssignment.save(), classroom.updateOne({ $push: { assignments: newAssignment._id } })]);
   
       res.status(201).json({ 
         success: true,

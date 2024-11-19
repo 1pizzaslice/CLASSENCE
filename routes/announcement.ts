@@ -1,7 +1,7 @@
 import { Router } from "express";
 const router = Router();
 
-import { createAnnouncement, editAnnouncement ,deleteAnnouncement } from '../controllers/announcement/';
+import { createAnnouncement, editAnnouncement ,deleteAnnouncement } from '../controllers';
 import { fileUploadMiddleware } from "../middlewares";
 
 

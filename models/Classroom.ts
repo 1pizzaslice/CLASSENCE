@@ -14,6 +14,7 @@ export interface IClassroom extends Document{
     privacy:string;
     updatedAt:Date;
     invitedStudents:string[];
+    lectures:string[];
 }
 
 const ClassroomSchema = new Schema({
@@ -61,7 +62,13 @@ const ClassroomSchema = new Schema({
     },
     invitedStudents:[{
         type:Schema.Types.ObjectId,
-    }]
+    }],
+    lectures:[
+        {
+            type:Schema.Types.ObjectId,
+            ref:'Lecture'
+        }
+    ]
 },{timestamps:true});
 
 const Classroom = model<IClassroom>('Classroom',ClassroomSchema);

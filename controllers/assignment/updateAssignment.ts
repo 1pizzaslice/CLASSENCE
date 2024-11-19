@@ -3,6 +3,7 @@ import { CustomError, CustomRequest } from "../../types";
 import { Assignment } from '../../models';
 import fs from 'fs/promises';
 import { cloudinary } from '../../config';
+import { IAssignment } from "../../models/assignments";
 
 const updateAssignment = async (req: CustomRequest, res: Response, next: NextFunction) => {
   const { id } = req.params;
@@ -11,9 +12,25 @@ const updateAssignment = async (req: CustomRequest, res: Response, next: NextFun
   const newMediaUrls: string[] = [];
 
   try {
-    const assignment = await Assignment.findById(id);
+    const assignment = await Assignment.findById(id)
+    .populate({
+        path: "classroom",
+        select:"teacher",
+        populate: {
+            path: "teacher",
+            select: "_id",
+        },
+    }) as IAssignment & {classroom:{teacher:{_id:string}}} ;
+
     if (!assignment) {
       return next(new CustomError("Assignment not found", 404));
+    }
+    if(assignment.dueDate < new Date()){
+      return next(new CustomError('Assignment is locked',400));
+    }
+
+    if(assignment.classroom.teacher._id.toString() !== req.user?._id.toString()){
+      return next(new CustomError('You are not authorized to update this assignment',403));
     }
 
     if (name) assignment.name = name;

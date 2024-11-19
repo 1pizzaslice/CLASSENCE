@@ -4,3 +4,4 @@ export {default as Classroom} from './Classroom';
 export {default as Announcement} from  './announcement';
 export {default as PollResponse} from  './poll';
 export {default as Assignment} from './assignments';
+export {default as Submission} from "./submission";

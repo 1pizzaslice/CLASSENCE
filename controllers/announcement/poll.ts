@@ -28,21 +28,21 @@ const submitPollResponse = async (req: CustomRequest, res: Response , next:NextF
       { $inc: { 'poll.options.$.votes': 1 } }
     );
 
-    res.status(201).json({ message: 'Poll response submitted successfully' });
+    res.status(201).json({success:true, message: 'Poll response submitted successfully' });
   } catch (error) {
     next(new CustomError('Failed to submit poll response', 500));
   }
 };
 
 
-const getPollResults = async (req: CustomRequest, res: Response) => {
+const getPollResults = async (req: CustomRequest, res: Response,next:NextFunction) => {
   const { announcementId } = req.params;
 
   try {
     const responses = await PollResponse.find({ announcementId }).populate('userId', 'name');
-    res.json(responses);
+    res.json({success:true, responses });
   } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch poll results' });
+    next(new CustomError('Failed to get poll results', 500));
   }
 };
 

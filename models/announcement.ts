@@ -1,3 +1,4 @@
+import { time } from 'console';
 import mongoose, { Schema, Document } from 'mongoose';
 
 interface Announcement extends Document {
@@ -10,6 +11,8 @@ interface Announcement extends Document {
   };
   createdBy: Schema.Types.ObjectId; 
   createdAt: Date;
+  updatedAt: Date;
+  classroom: Schema.Types.ObjectId;
 }
 
 interface PollOption {
@@ -26,8 +29,8 @@ const AnnouncementSchema = new Schema<Announcement>({
     options: [{ optionText: String, votes: { type: Number, default: 0 } }]
   },
   createdBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
-  createdAt: { type: Date, default: Date.now }
-});
+  classroom: { type: Schema.Types.ObjectId, ref: 'Classroom', required: true },
+}, { timestamps: true});
 
 const Announcement = mongoose.model<Announcement>('Announcement', AnnouncementSchema);
 export default Announcement;
