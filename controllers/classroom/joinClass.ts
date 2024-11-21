@@ -67,7 +67,8 @@ const joinClass = async (req: CustomRequest, res: Response, next: NextFunction) 
             ),
             User.updateOne(
               { _id: user._id },
-              { $push: { classRooms: classroom._id } }
+              { $push: { classRooms: classroom._id } },
+              {$push:{joinedClassrooms:classroom._id}}
             )
           ]);
         res.status(200).send({

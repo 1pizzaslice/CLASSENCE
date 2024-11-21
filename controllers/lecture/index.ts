@@ -1,0 +1,1 @@
+export {createLecture,getLectures,deleteLecture,updateLecture} from "./lecture"

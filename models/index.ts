@@ -5,3 +5,5 @@ export {default as Announcement} from  './announcement';
 export {default as PollResponse} from  './poll';
 export {default as Assignment} from './assignments';
 export {default as Submission} from "./submission";
+export {default as Lecture} from "./Lecture";
+export {default as Todo} from "./Todo";

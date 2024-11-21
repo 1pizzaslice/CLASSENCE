@@ -15,6 +15,10 @@ export interface IUser extends Document {
     version:number;
     recentClasses:string[];
     recentGrades:string[];
+    isNotificationEnabled:boolean;
+    recentNotifications:string[];
+    createdClassrooms:string[];
+    joinedClassrooms:string[];
 }
 
 const UserSchema: Schema = new Schema({
@@ -53,6 +57,14 @@ const UserSchema: Schema = new Schema({
         type:Schema.Types.ObjectId,
         ref:'Classroom'
     }],
+    createdClassrooms:[{
+        type:Schema.Types.ObjectId,
+        ref:'Classroom'
+    }],
+    joinedClassrooms:[{
+        type:Schema.Types.ObjectId,
+        ref:'Classroom'
+    }],
     version:{
         type:Number,
         default:0
@@ -64,6 +76,14 @@ const UserSchema: Schema = new Schema({
     recentGrades:[{
         type:Schema.Types.ObjectId,
         ref:'Submission'
+    }],
+    isNotificationEnabled:{
+        type:Boolean,
+        default:true
+    },
+    recentNotifications:[{
+        type:Schema.Types.ObjectId,
+        ref:'Notification'
     }]
 
 },{timestamps:true})
