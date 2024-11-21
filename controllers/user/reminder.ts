@@ -1,6 +1,5 @@
 import { Response, NextFunction } from "express";
-import Reminder from "../../models/Reminder";
-import Lecture from "../../models/Lecture";
+import {Reminder,Lecture} from "../../models/";
 import { CustomError, CustomRequest } from "../../types";
 
 export const createReminder = async (req: CustomRequest, res: Response, next: NextFunction) => {
@@ -11,6 +10,10 @@ export const createReminder = async (req: CustomRequest, res: Response, next: Ne
     next(new CustomError("User not authenticated", 401));
     return;
   }
+  if (!lectureId || !scheduledTime) {
+    next(new CustomError("Lecture ID and scheduled time are required", 400));
+    return;
+    }
 
   try {
     const lectureExists = await Lecture.findById(lectureId);
@@ -18,7 +21,10 @@ export const createReminder = async (req: CustomRequest, res: Response, next: Ne
       next(new CustomError("Lecture not found", 404));
       return;
     }
-
+    if(lectureExists.startTime < new Date()){
+        next(new CustomError("Cannot set reminder for past lectures", 400));
+        return;
+    }
     const reminder = await Reminder.create({
       user: userId,
       lecture: lectureId,
@@ -38,6 +44,10 @@ export const createReminder = async (req: CustomRequest, res: Response, next: Ne
 export const updateReminder = async (req: CustomRequest, res: Response, next: NextFunction) => {
   const { reminderId } = req.params;
   const { scheduledTime } = req.body;
+  if(!scheduledTime){
+    next(new CustomError("Scheduled time is required", 400));
+    return;
+  }
 
   try {
     const updatedReminder = await Reminder.findByIdAndUpdate(
@@ -63,6 +73,10 @@ export const updateReminder = async (req: CustomRequest, res: Response, next: Ne
 
 export const deleteReminder = async (req: CustomRequest, res: Response, next: NextFunction) => {
   const { reminderId } = req.params;
+  if (!reminderId) {
+    next(new CustomError("Reminder ID is required", 400));
+    return;
+  }
 
   try {
     const deletedReminder = await Reminder.findByIdAndDelete(reminderId);

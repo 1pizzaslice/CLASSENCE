@@ -18,6 +18,7 @@ const createLecture = async (req: CustomRequest, res: Response, next: NextFuncti
         if (!classroomExists) {
             return next(new CustomError("Classroom not found", 404));
         }
+        console.log(classroomExists.teacher.toString(), req.user?._id);
         if (classroomExists.teacher.toString() !== req.user?._id) {
             return next(new CustomError("You are not authorized to create lecture in this classroom", 403));
         }
