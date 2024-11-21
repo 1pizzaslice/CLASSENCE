@@ -60,6 +60,8 @@ const getUserDetails = async (req: CustomRequest, res: Response, next: NextFunct
                 createdAt: user.createdAt,
                 createdClasses,
                 joinedClasses,
+                noOfCreatedClasses: createdClasses.length,
+                noOfJoinedClasses: joinedClasses.length,
             },
         });
     } catch (error) {

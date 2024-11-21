@@ -11,9 +11,10 @@ const assignmentPageData = async (req: CustomRequest, res: Response, next: NextF
     next(new CustomError("User not found", 404));
     return;
   }
+
   try {
     const user = await User.findById(id)
-      .select("name recentGrades classRooms")
+      .select("name recentGrades classRooms createdClassrooms")
       .populate({
         path: "recentGrades",
         select: "assignment marks",
@@ -24,18 +25,16 @@ const assignmentPageData = async (req: CustomRequest, res: Response, next: NextF
       })
       .populate({
         path: "classRooms",
-        select: "name code subject assignments",
-        match: { teacher: { $ne: id } },
+        select: "name code subject assignments teacher students",
         populate: {
           path: "assignments",
-          select: "title dueDate submissions", 
-          match: { dueDate: { $gte: new Date() } },
+          select: "title dueDate submissions",
           populate: {
-            path: "submissions", 
+            path: "submissions",
             select: "isGraded",
           },
         },
-      }) as IUser & { recentGrades: { assignment: { name: string; classroom: string } }[] } & { classRooms: IClassroom[] };
+      }) as IUser & { classRooms: IClassroom[] };
 
     if (!user) {
       next(new CustomError("User not found", 404));
@@ -44,33 +43,45 @@ const assignmentPageData = async (req: CustomRequest, res: Response, next: NextF
 
     const createdClassrooms = await Classroom.find({ teacher: id }).select("_id");
     const createdAssignments = await Assignment.find({
-        classroom: { $in: createdClassrooms.map((c) => c._id) },
+      classroom: { $in: createdClassrooms.map((c) => c._id) },
+    })
+      .select("name dueDate classroom submissions")
+      .populate({
+        path: "classroom",
+        select: "name code subject",
       })
-        .select("name dueDate classroom submissions")
-        .populate({
-          path: "classroom",
-          select: "name code subject",
-        })
-        .sort({ createdAt: -1 });
+      .sort({ createdAt: -1 });
 
-    const joinedClassesData = await Promise.all(user.classRooms.map(async (classroom: IClassroom) => {
-      const assignments = classroom.assignments as unknown as IAssignment[]; 
+    let totalJoinedAssignments = 0;
+    let completedJoinedAssignments = 0;
+    let overdueJoinedAssignments = 0;
+    let dueSoonJoinedAssignments = 0;
+
+    const joinedClassesData = user.classRooms.map((classroom: IClassroom) => {
+      const assignments = classroom.assignments as unknown as IAssignment[];
+
       const totalAssignments = assignments.length;
-      
-      const completedAssignments = assignments.filter(a => 
-        a.submissions.some((s:any) => s.isGraded === true)
+      const completedAssignments = assignments.filter((a) =>
+        a.submissions.some((s: any) => s.isGraded === true)
       ).length;
 
-      const overdueAssignments = assignments.filter(a => 
+      const overdueAssignments = assignments.filter((a) =>
         new Date(a.dueDate) < new Date() && !a.submissions.some((s: any) => s.isGraded === true)
       ).length;
 
-      const dueSoonAssignments = assignments.filter(a => 
-        new Date(a.dueDate) > new Date() && 
-        new Date(a.dueDate).getTime() - new Date().getTime() < 7 * 24 * 60 * 60 * 1000 && 
-        !a.submissions.some((s: any) => s.isGraded === true) && 
-        !(new Date(a.dueDate) < new Date()) 
+      const dueSoonAssignments = assignments.filter((a) =>
+        new Date(a.dueDate) > new Date() &&
+        new Date(a.dueDate).getTime() - new Date().getTime() < 7 * 24 * 60 * 60 * 1000 &&
+        !a.submissions.some((s: any) => s.isGraded === true) &&
+        !(new Date(a.dueDate) < new Date())
       ).length;
+
+      if (classroom.teacher.toString() !== id.toString()) {
+        totalJoinedAssignments += totalAssignments;
+        completedJoinedAssignments += completedAssignments;
+        overdueJoinedAssignments += overdueAssignments;
+        dueSoonJoinedAssignments += dueSoonAssignments;
+      }
 
       return {
         classroom: classroom,
@@ -79,19 +90,23 @@ const assignmentPageData = async (req: CustomRequest, res: Response, next: NextF
         overdueAssignments,
         dueSoonAssignments,
       };
-    }));
+    });
 
-    const createdClassroomsData = await Promise.all(createdAssignments.map(async (assignment: IAssignment) => {
-      const totalSubmissions = await Submission.countDocuments({
-        assignment: assignment._id,
-      });
+    let totalCreatedAssignments = 0;
+    let totalCreatedSubmissions = 0;
+    let completedCreatedSubmissions = 0;
 
-      const completedSubmissions = await Submission.countDocuments({
-        assignment: assignment._id,
-        isGraded: true,
-      });
+    const createdClassroomsData = createdAssignments.map((assignment: IAssignment) => {
+      const totalSubmissions = assignment.submissions.length;
+
+      const completedSubmissions = assignment.submissions.filter((s: any) => s.isGraded === true)
+        .length;
 
       const notCompletedSubmissions = totalSubmissions - completedSubmissions;
+
+      totalCreatedAssignments++;
+      totalCreatedSubmissions += totalSubmissions;
+      completedCreatedSubmissions += completedSubmissions;
 
       return {
         classroom: assignment.classroom,
@@ -99,7 +114,10 @@ const assignmentPageData = async (req: CustomRequest, res: Response, next: NextF
         completedSubmissions,
         notCompletedSubmissions,
       };
-    }));
+    });
+
+    const notCompletedCreatedSubmissions =
+      totalCreatedSubmissions - completedCreatedSubmissions;
 
     res.status(200).json({
       success: true,
@@ -107,13 +125,27 @@ const assignmentPageData = async (req: CustomRequest, res: Response, next: NextF
       user: {
         name: user.name,
         recentGrades: user.recentGrades,
-        joinedClasses: joinedClassesData,
-        createdAssignments: createdClassroomsData,
+        joinedClasses: {
+          totalClasses: user.classRooms.filter((classroom: IClassroom) => classroom.students.includes(id)).length,
+          totalAssignments: totalJoinedAssignments,
+          completedAssignments: completedJoinedAssignments,
+          overdueAssignments: overdueJoinedAssignments,
+          dueSoonAssignments: dueSoonJoinedAssignments,
+          perClassroomData: joinedClassesData,
+        },
+        createdAssignments: {
+          totalClasses: createdClassrooms.length,
+          totalAssignments: totalCreatedAssignments,
+          totalSubmissions: totalCreatedSubmissions,
+          completedSubmissions: completedCreatedSubmissions,
+          notCompletedSubmissions: notCompletedCreatedSubmissions,
+          perClassroomData: createdClassroomsData,
+        },
       },
     });
   } catch (error) {
     const err = error as Error;
-    next(new CustomError("Failed to get dashboard data", 500, err.message));
+    next(new CustomError("Failed to get assignment data", 500, err.message));
   }
 };
 

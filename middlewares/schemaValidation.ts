@@ -21,6 +21,19 @@ export const loginSchema = z.object({
     password: z.string().optional(), 
 });
 export const resetPasswordSchema = baseSchema.pick({ password: true });
+export const changePasswordSchema = z.object({
+    oldPassword:  z
+        .string()
+        .min(8, "Password must be at least 8 characters long")
+        .optional(),
+    newPassword:  z
+        .string()
+        .min(8, "Password must be at least 8 characters long")
+        .regex(/[A-Z]/, "Password must contain at least one uppercase letter")
+        .regex(/\d/, "Password must contain at least one number")
+        .regex(/[!@#$%^&*(),.?\":{}|<>]/, "New Password must contain at least one special character")
+        .optional(),
+})
 
 export const validateRequest = (schema: ZodSchema<any>) => {
     return (req: Request, res: Response, next: NextFunction) => {

@@ -50,9 +50,9 @@ const createClass = async (req: CustomRequest, res: Response, next: NextFunction
       teacher: id,
     });
 
-    await classroom.save();
     user.classRooms.push(classroom._id);
-    await user.save();
+    user.createdClassrooms.push(classroom._id);
+    await Promise.all([classroom.save(), user.save()]);
 
     res.status(201).send({
       success: true,
