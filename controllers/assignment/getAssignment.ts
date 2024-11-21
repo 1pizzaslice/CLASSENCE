@@ -17,17 +17,22 @@ const getAssignments = async (req: CustomRequest, res: Response, next: NextFunct
 
     let assignments;
     if (isTeacher) {
-      assignments = await Assignment.find({ classroom: classroomId }).populate({
-        path: "submissions",
-        select: "marks isGraded student media",
-        populate: { path: "student", select: "name" },
-      });
+      assignments = await Assignment.find({ classroom: classroomId })
+        .populate({
+          path: "submissions",
+          select: "marks isGraded student media",
+          populate: { path: "student", select: "name" },
+        })
+        .sort({ createdAt: -1 });
     } else {
-      assignments = await Assignment.find({ classroom: classroomId }).populate({
-        path: "submissions",
-        select: "marks isGraded student media",
-        match: { student: req.user?._id },
-      });
+      assignments = await Assignment.find({ classroom: classroomId })
+        .populate({
+          path: "submissions",
+          select: "marks isGraded student media",
+          populate: { path: "student", select: "name" },
+          match: { student: req.user?._id },
+        })
+        .sort({ createdAt: -1 });
     }
 
     res.status(200).json(assignments);

@@ -13,6 +13,11 @@ const createAssignment = async (req: CustomRequest, res: Response, next: NextFun
   
     const files = req.files as Express.Multer.File[] | undefined;
     const mediaUrls: string[] = []; 
+
+    if(new Date(dueDate)< new Date()){
+      next(new CustomError('Due date should be greater than current date',400));
+      return;
+    }
   
     try {
       const [user,classroom] = await Promise.all([User.findById(req.user._id),Classroom.findOne({code})]);
