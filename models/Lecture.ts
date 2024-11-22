@@ -2,7 +2,7 @@ import { Document, Schema, model } from "mongoose";
 
 export enum LectureStatus {
   Scheduled = "Scheduled",
-  InProgress = "In Progress",
+  InProgress = "InProgress",
   Completed = "Completed",
 }
 
@@ -20,30 +20,56 @@ export interface ILecture extends Document {
   status: LectureStatus;
   classroom: Schema.Types.ObjectId;
   teacher: Schema.Types.ObjectId;
-  recordingsURL: string;
+  recordingsURL:[
+    {
+      quality:string,
+      url:string
+    }
+  ];
   attendance: {
     student: Schema.Types.ObjectId;
     joinedDuration: number;
     status: AttendanceStatus;
+    lastJoined?: Date;
+    reasonForAbsence?: string;
+    joinCount?: number;
   }[];
+  statusTimestamps?: {
+    scheduledAt: Date;
+    startedAt?: Date;
+    completedAt?: Date;
+  };
 }
 
 const AttendanceSchema = new Schema(
   {
-    student: {
+    student: { 
       type: Schema.Types.ObjectId,
-      ref: 'User',
-      required: true,
+      ref: "User",
+      required: true 
     },
     joinedDuration: {
       type: Number,
       default: 0,
-      min: 0,
+      min: 0 
     },
     status: {
       type: String,
       enum: Object.values(AttendanceStatus),
       default: AttendanceStatus.Absent,
+    },
+    lastJoined: { 
+      type: Date, 
+      default: null 
+    },
+    reasonForAbsence: { 
+      type: String, 
+      default: null, 
+      trim: true 
+    },
+    joinCount: { 
+      type: Number, 
+      default: 0 
     },
   },
   { _id: false }
@@ -51,50 +77,76 @@ const AttendanceSchema = new Schema(
 
 const LectureSchema = new Schema(
   {
-    title: {
-      type: String,
-      required: true,
-      trim: true,
+    title: { 
+      type: String, 
+      required: true, 
+      trim: true 
     },
-    description: {
-      type: String,
-      required: true,
-      trim: true,
+    description: { 
+      type: String, 
+      required: true, 
+      trim: true 
     },
-    startTime: {
-      type: Date,
-      required: true,
+    startTime: { 
+      type: Date, 
+      required: true 
     },
     endTime: {
       type: Date,
       default: null,
+      validate: {
+        validator: function (this: ILecture, value: Date) {
+          return !value || value > this.startTime;
+        },
+        message: "End time must be greater than start time.",
+      },
     },
     status: {
       type: String,
-      enum: Object.values(LectureStatus),
+      enum: {
+        values: Object.values(LectureStatus),
+        message: `{VALUE} is not a valid lecture status`,
+      },
       default: LectureStatus.Scheduled,
     },
-    classroom: {
-      type: Schema.Types.ObjectId,
-      ref: 'Classroom',
-      required: true,
+    classroom: { 
+      type: Schema.Types.ObjectId, 
+      ref: "Classroom", 
+      required: true 
     },
-    teacher: {
-      type: Schema.Types.ObjectId,
-      ref: 'User',
-      required: true,
+    teacher: { 
+      type: Schema.Types.ObjectId, 
+      ref: "User", 
+      required: true 
     },
-    recordingsURL: {
-      type: String,
-      default: ''
-    },
+    recordingsURL:[
+      {
+        quality:{
+          type:String,
+          required:true,
+          enum:["144p","360p"]
+        },
+        url:{
+          type:String,
+          required:true
+        }
+      }
+    ],
     attendance: [AttendanceSchema],
+    statusTimestamps: {
+      scheduledAt: { type: Date, default: Date.now },
+      startedAt: { type: Date, default: null },
+      completedAt: { type: Date, default: null },
+    },
   },
-  {
-    timestamps: true,
-    versionKey: false,
-  }
+  { timestamps: true, versionKey: false }
 );
 
-const Lecture = model<ILecture>('Lecture', LectureSchema);
+LectureSchema.index({ classroom: 1 }); //add index for better performance
+LectureSchema.index({ teacher: 1 });
+LectureSchema.index({ status: 1 });
+AttendanceSchema.index({ student: 1 });
+
+
+const Lecture = model<ILecture>("Lecture", LectureSchema);
 export default Lecture;
