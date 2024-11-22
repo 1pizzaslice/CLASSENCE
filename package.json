@@ -30,6 +30,7 @@
     "mongoose": "^8.7.3",
     "multer": "^1.4.5-lts.1",
     "nodemailer": "^6.9.15",
+    "socket.io": "^4.8.1",
     "uuid": "^10.0.0",
     "zod": "^3.24.0-canary.20241016T212913"
   },
@@ -38,6 +39,7 @@
     "@types/jsonwebtoken": "^9.0.7",
     "@types/mongoose": "^5.11.96",
     "@types/multer": "^1.4.12",
+    "@types/socket.io": "^3.0.1",
     "nodemon": "^3.1.7",
     "ts-node": "^10.9.1",
     "typescript": "^5.2.2"
