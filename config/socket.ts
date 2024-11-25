@@ -10,7 +10,6 @@ export default function configureSocket(server: http.Server): Server {
   const io = new Server(server, {
     cors: {
       origin: "*", 
-      methods: ["GET", "POST"],
     },
   });
 

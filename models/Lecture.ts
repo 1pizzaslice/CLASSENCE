@@ -20,12 +20,10 @@ export interface ILecture extends Document {
   status: LectureStatus;
   classroom: Schema.Types.ObjectId;
   teacher: Schema.Types.ObjectId;
-  recordingsURL:[
-    {
+  recordingsURL:{
       quality:string,
       url:string
-    }
-  ];
+  }[];
   attendance: {
     student: Schema.Types.ObjectId;
     joinedDuration: number;
@@ -128,7 +126,8 @@ const LectureSchema = new Schema(
         },
         url:{
           type:String,
-          required:true
+          required:true,
+          unique:true,
         }
       }
     ],
@@ -142,10 +141,10 @@ const LectureSchema = new Schema(
   { timestamps: true, versionKey: false }
 );
 
-LectureSchema.index({ classroom: 1 }); //add index for better performance
+LectureSchema.index({ classroom: 1, startTime: 1 }); //add index for better performance
 LectureSchema.index({ teacher: 1 });
 LectureSchema.index({ status: 1 });
-AttendanceSchema.index({ student: 1 });
+AttendanceSchema.index({ student: 1, status: 1 });
 
 
 const Lecture = model<ILecture>("Lecture", LectureSchema);

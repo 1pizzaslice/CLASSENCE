@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Live Class</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      flex-direction: column;
+      margin: 20px;
+    }
+
+    #liveStatus {
+      font-size: 18px;
+      margin-bottom: 20px;
+    }
+
+    video {
+      width: 600px;
+      height: 400px;
+      border: 1px solid #ccc;
+    }
+
+    button {
+      padding: 10px 20px;
+      margin: 10px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+
+<h1>Live Class</h1>
+
+<!-- Display live session status -->
+<div id="liveStatus">Status: Not Started</div>
+
+<!-- Video element to show live stream -->
+<video id="localVideo" autoplay muted></video>
+<video id="remoteVideo" autoplay></video>
+
+<!-- Buttons to control live session -->
+<button id="startSessionBtn">Start Live Session</button>
+<button id="stopSessionBtn" disabled>Stop Live Session</button>
+
+<script src="/socket.io/socket.io.js"></script>
+<script>
+  const lectureId = '6744826750b7463b21edc4a7'; // Replace with actual lecture ID
+  const socketServerUrl = 'http://localhost:3000'; // Replace with your server URL
+
+  let socket;
+  let localStream;
+  let peerConnection;
+  const config = {
+    iceServers: [{ urls: "stun:stun.l.google.com:19302" }]
+  };
+
+  // UI Elements
+  const liveStatusElement = document.getElementById('liveStatus');
+  const startSessionBtn = document.getElementById('startSessionBtn');
+  const stopSessionBtn = document.getElementById('stopSessionBtn');
+  const localVideoElement = document.getElementById('localVideo');
+  const remoteVideoElement = document.getElementById('remoteVideo');
+
+  // Connect to Socket.IO server for real-time communication
+  function connectToSocket() {
+    socket = io(socketServerUrl);
+
+    socket.on('connect', () => {
+      console.log('Connected to Socket.IO server');
+    });
+
+    socket.on('session-started', () => {
+      updateLiveSessionStatus('started');
+    });
+
+    socket.on('session-ended', () => {
+      updateLiveSessionStatus('ended');
+    });
+
+    socket.on('offer', async (data) => {
+      await peerConnection.setRemoteDescription(new RTCSessionDescription(data));
+      const answer = await peerConnection.createAnswer();
+      await peerConnection.setLocalDescription(answer);
+      socket.emit('answer', { roomId: `lecture-${lectureId}`, data: answer });
+    });
+
+    socket.on('answer', async (data) => {
+      await peerConnection.setRemoteDescription(new RTCSessionDescription(data));
+    });
+
+    socket.on('ice-candidate', async (data) => {
+      await peerConnection.addIceCandidate(new RTCIceCandidate(data));
+    });
+
+    socket.on('disconnect', () => {
+      console.log('Socket.IO connection closed');
+    });
+  }
+
+  // Update the status of the live session
+  function updateLiveSessionStatus(status) {
+    if (status === 'started') {
+      liveStatusElement.innerText = 'Status: Live';
+      startSessionBtn.disabled = true;
+      stopSessionBtn.disabled = false;
+    } else {
+      liveStatusElement.innerText = 'Status: Not Started';
+      startSessionBtn.disabled = false;
+      stopSessionBtn.disabled = true;
+    }
+  }
+
+  // Create peer connection
+  function createPeerConnection() {
+    peerConnection = new RTCPeerConnection(config);
+
+    peerConnection.onicecandidate = (event) => {
+      if (event.candidate) {
+        socket.emit('ice-candidate', { roomId: `lecture-${lectureId}`, data: event.candidate });
+      }
+    };
+
+    peerConnection.ontrack = (event) => {
+      remoteVideoElement.srcObject = event.streams[0];
+    };
+
+    localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
+  }
+
+  // Start live session
+  startSessionBtn.addEventListener('click', () => {
+    fetch(`${socketServerUrl}/api/lecture/start-live-session`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ lectureId })
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        socket.emit('join-room', `lecture-${lectureId}`);
+        createPeerConnection();
+        peerConnection.createOffer()
+          .then(offer => peerConnection.setLocalDescription(offer))
+          .then(() => socket.emit('offer', { roomId: `lecture-${lectureId}`, data: peerConnection.localDescription }));
+      }
+    })
+    .catch(err => {
+      console.error('Error starting live session:', err);
+    });
+  });
+
+  // Stop live session
+  stopSessionBtn.addEventListener('click', () => {
+    fetch(`${socketServerUrl}/api/lecture/stop-live-session`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ lectureId })
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        socket.emit('leave-room', `lecture-${lectureId}`);
+        updateLiveSessionStatus('ended');
+      }
+    })
+    .catch(err => {
+      console.error('Error stopping live session:', err);
+    });
+  });
+
+  // Get user media
+  navigator.mediaDevices.getUserMedia({ video: true, audio: true })
+    .then(stream => {
+      localStream = stream;
+      localVideoElement.srcObject = stream;
+    })
+    .catch(error => console.error('Error accessing media devices.', error));
+
+  // Connect to Socket.IO when the page loads
+  window.onload = () => {
+    connectToSocket();
+  };
+</script>
+
+</body>
+</html>
