@@ -39,10 +39,13 @@ const removeStudent = async(req:CustomRequest,res:Response,next:NextFunction) =>
 
 
         classroom.students = classroom.students.filter((student) => student.toString() !== studentId);
+        
 
         await Promise.all([
             classroom.save(),
-            User.updateOne({ _id: studentId }, { $pull: { classRooms: classroom._id } })
+            User.updateOne({ _id: studentId }, { $pull: { classRooms: classroom._id,joinedClassrooms: classroom._id
+            },
+             })
         ]);
 
 

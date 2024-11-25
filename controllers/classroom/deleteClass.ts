@@ -35,11 +35,26 @@ const deleteClass = async(req:CustomRequest,res:Response,next:NextFunction) => {
 
         classroom.isDeleted = true;
         await Promise.all([
-            User.updateMany({ classRooms: classroom._id }, { $pull: { classRooms: classroom._id } }),
+            User.updateMany(
+              { 
+                $or: [
+                  { classRooms: classroom._id },
+                  { joinedClasses: classroom._id },
+                  { joinedClassrooms: classroom._id },
+                  { createdClassrooms: classroom._id }
+                ]
+              },
+              {
+                $pull: {
+                  classRooms: classroom._id,
+                  joinedClasses: classroom._id,
+                  joinedClassrooms: classroom._id,
+                  createdClassrooms: classroom._id
+                }
+              }
+            ),
             classroom.save()
           ]);
-          
-
         res.status(200).send({
             success:true,
             message:'Classroom deleted successfully',

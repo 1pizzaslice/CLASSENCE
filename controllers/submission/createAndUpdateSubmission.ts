@@ -21,7 +21,7 @@ const createOrUpdateSubmission = async (req:CustomRequest,res:Response,next:Next
                     path: "teacher",
                     select: "_id",
                 },
-            }) as unknown as IAssignment & {classroom:{teacher:{_id:string}}},Submission.findOne({assignment:assignmentId,student:req.user?._id})]);
+            }) as unknown as IAssignment & {classroom:{teacher:{_id:string},_id:string}},Submission.findOne({assignment:assignmentId,student:req.user?._id})]);
         if(!user){
             next(new CustomError('User not found',404));
             return;
@@ -39,7 +39,8 @@ const createOrUpdateSubmission = async (req:CustomRequest,res:Response,next:Next
             next(new CustomError('Assignment is locked',400));
             return;
         }
-        if(!user.classRooms.includes(assignment.classroom.toString())){
+        // console.log(user.classRooms,assignment.classroom._id.toString());
+        if(!user.classRooms.includes(assignment.classroom._id.toString())){
             next(new CustomError('You are not authorized to submit in this classroom',403));
             return;
         }
