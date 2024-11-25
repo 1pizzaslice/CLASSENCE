@@ -7,8 +7,8 @@ import jwt from "jsonwebtoken";
 
 const joinClass = async (req: CustomRequest, res: Response, next: NextFunction) => {
     const { code,token } = req.body;
-    if (!code) {
-        next(new CustomError('Code is required', 400));
+    if (!code && !token) {
+        next(new CustomError('Code or token is required', 400));
         return;
     }
 
