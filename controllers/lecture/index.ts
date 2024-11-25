@@ -1,1 +1,1 @@
-export {createLecture,getLectures,deleteLecture,updateLecture} from "./lecture"
+export { createLecture, getLectures, deleteLecture, updateLecture , startLecture, endLecture , startLiveSession , stopLiveSession } from './Lecture';
