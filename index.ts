@@ -9,6 +9,7 @@ import cors from 'cors';
 import {logRequest ,errorHandler,verify} from './middlewares';
 import {CustomError} from './types';
 import rateLimit from 'express-rate-limit';
+import './services/jobScheduler';
 
 const app = express();
 const server = http.createServer(app);
