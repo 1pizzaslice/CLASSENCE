@@ -8,3 +8,4 @@ export {default as Submission} from "./submission";
 export {default as Lecture} from "./Lecture";
 export {default as Todo} from "./Todo";
 export {default as Reminder} from "./Reminder";
+export {default as Chat} from "./chat";

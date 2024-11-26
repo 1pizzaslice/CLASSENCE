@@ -1,6 +1,6 @@
 import { Response, NextFunction } from "express";
 import { CustomError, CustomRequest } from "../../types";
-import { User, Classroom, Assignment, Submission } from "../../models";
+import { User } from "../../models";
 import { IUser } from "../../models/User";
 import { IClassroom } from "../../models/Classroom";
 import { IAssignment } from "../../models/assignments";
@@ -14,7 +14,7 @@ const assignmentPageData = async (req: CustomRequest, res: Response, next: NextF
 
   try {
     const user = await User.findById(id)
-      .select("name recentGrades classRooms createdClassrooms")
+      .select("name recentGrades joinedClassrooms createdClassrooms")
       .populate({
         path: "recentGrades",
         select: "assignment marks",
@@ -24,7 +24,7 @@ const assignmentPageData = async (req: CustomRequest, res: Response, next: NextF
         },
       })
       .populate({
-        path: "classRooms",
+        path: "createdClassrooms", 
         select: "name code subject assignments teacher students",
         populate: {
           path: "assignments",
@@ -34,30 +34,31 @@ const assignmentPageData = async (req: CustomRequest, res: Response, next: NextF
             select: "isGraded",
           },
         },
-      }) as IUser & { classRooms: IClassroom[] };
+      })
+      .populate({
+        path: "joinedClassrooms", 
+        select: "name code subject assignments teacher students",
+        populate: {
+          path: "assignments",
+          select: "title dueDate submissions",
+          populate: {
+            path: "submissions",
+            select: "isGraded",
+          },
+        },
+      }) as IUser & { joinedClassrooms: IClassroom[], createdClassrooms: IClassroom[] };
 
     if (!user) {
       next(new CustomError("User not found", 404));
       return;
     }
 
-    const createdClassrooms = await Classroom.find({ teacher: id }).select("_id");
-    const createdAssignments = await Assignment.find({
-      classroom: { $in: createdClassrooms.map((c) => c._id) },
-    })
-      .select("name dueDate classroom submissions")
-      .populate({
-        path: "classroom",
-        select: "name code subject",
-      })
-      .sort({ createdAt: -1 });
-
     let totalJoinedAssignments = 0;
     let completedJoinedAssignments = 0;
     let overdueJoinedAssignments = 0;
     let dueSoonJoinedAssignments = 0;
 
-    const joinedClassesData = user.classRooms.map((classroom: IClassroom) => {
+    const joinedClassroomsData = user.joinedClassrooms.map((classroom: IClassroom) => {
       const assignments = classroom.assignments as unknown as IAssignment[];
 
       const totalAssignments = assignments.length;
@@ -96,28 +97,28 @@ const assignmentPageData = async (req: CustomRequest, res: Response, next: NextF
     let totalCreatedSubmissions = 0;
     let completedCreatedSubmissions = 0;
 
-    const createdClassroomsData = createdAssignments.map((assignment: IAssignment) => {
-      const totalSubmissions = assignment.submissions.length;
+    const createdClassroomsData = user.createdClassrooms.map((classroom: IClassroom) => {
+      const assignments = classroom.assignments as unknown as IAssignment[];
 
-      const completedSubmissions = assignment.submissions.filter((s: any) => s.isGraded === true)
-        .length;
+      const totalAssignments = assignments.length;
+      const totalSubmissions = assignments.reduce((sum, assignment) => sum + assignment.submissions.length, 0);
+      const completedSubmissions = assignments.reduce((sum, assignment) =>
+        sum + assignment.submissions.filter((s: any) => s.isGraded === true).length, 0);
 
-      const notCompletedSubmissions = totalSubmissions - completedSubmissions;
-
-      totalCreatedAssignments++;
+      totalCreatedAssignments += totalAssignments;
       totalCreatedSubmissions += totalSubmissions;
       completedCreatedSubmissions += completedSubmissions;
 
       return {
-        classroom: assignment.classroom,
+        classroom: classroom,
+        totalAssignments,
         totalSubmissions,
         completedSubmissions,
-        notCompletedSubmissions,
+        notCompletedSubmissions: totalSubmissions - completedSubmissions,
       };
     });
 
-    const notCompletedCreatedSubmissions =
-      totalCreatedSubmissions - completedCreatedSubmissions;
+    const notCompletedCreatedSubmissions = totalCreatedSubmissions - completedCreatedSubmissions;
 
     res.status(200).json({
       success: true,
@@ -125,16 +126,16 @@ const assignmentPageData = async (req: CustomRequest, res: Response, next: NextF
       user: {
         name: user.name,
         recentGrades: user.recentGrades,
-        joinedClasses: {
-          totalClasses: user.classRooms.filter((classroom: IClassroom) => classroom.students.includes(id)).length,
+        joinedClassrooms: {
+          totalClasses: user.joinedClassrooms.length,
           totalAssignments: totalJoinedAssignments,
           completedAssignments: completedJoinedAssignments,
           overdueAssignments: overdueJoinedAssignments,
           dueSoonAssignments: dueSoonJoinedAssignments,
-          perClassroomData: joinedClassesData,
+          perClassroomData: joinedClassroomsData,
         },
-        createdAssignments: {
-          totalClasses: createdClassrooms.length,
+        createdClassrooms: {
+          totalClasses: user.createdClassrooms.length,
           totalAssignments: totalCreatedAssignments,
           totalSubmissions: totalCreatedSubmissions,
           completedSubmissions: completedCreatedSubmissions,

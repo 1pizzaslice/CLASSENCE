@@ -19,6 +19,7 @@ export interface IUser extends Document {
     recentNotifications:string[];
     createdClassrooms:string[];
     joinedClassrooms:string[];
+    isAdmin:boolean;
 }
 
 const UserSchema: Schema = new Schema({
@@ -84,7 +85,11 @@ const UserSchema: Schema = new Schema({
     recentNotifications:[{
         type:Schema.Types.ObjectId,
         ref:'Notification'
-    }]
+    }],
+    isAdmin:{
+        type:Boolean,
+        default:false
+    }
 
 },{timestamps:true})
 

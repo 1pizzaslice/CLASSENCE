@@ -72,7 +72,6 @@ const dashboardPageData = async (req: CustomRequest, res: Response, next: NextFu
     const joinedClassPromises = classDetails.joined.map(async (classroom: IClassroom) => {
       const assignments = classroom.assignments as unknown as IAssignment[];
 
-      // Calculate completed assignments
       const completedAssignments = assignments.filter((assignment) =>
         assignment.submissions.some((submission) => {
           const sub = submission as unknown as ISubmission;
@@ -80,7 +79,6 @@ const dashboardPageData = async (req: CustomRequest, res: Response, next: NextFu
         })
       ).length;
 
-      // Calculate overdue assignments
       const overdueAssignments = assignments.filter((assignment) =>
         new Date(assignment.dueDate) < new Date() &&
         !assignment.submissions.some((submission) => {
@@ -89,7 +87,6 @@ const dashboardPageData = async (req: CustomRequest, res: Response, next: NextFu
         })
       ).length;
 
-      // Calculate due soon assignments
       const dueSoonAssignments = assignments.filter((assignment) =>
         new Date(assignment.dueDate) > new Date() &&
         new Date(assignment.dueDate).getTime() - new Date().getTime() < 7 * 24 * 60 * 60 * 1000 &&
@@ -150,7 +147,6 @@ const dashboardPageData = async (req: CustomRequest, res: Response, next: NextFu
 
       totalStudentsCreated += totalStudents;
 
-      // Calculate completed assignments for created classrooms
       const completedAssignments = assignments.filter((assignment) =>
         assignment.submissions.some((submission) => {
           const sub = submission as unknown as ISubmission;
@@ -158,7 +154,6 @@ const dashboardPageData = async (req: CustomRequest, res: Response, next: NextFu
         })
       ).length;
 
-      // Calculate overdue assignments for created classrooms
       const overdueAssignments = assignments.filter((assignment) =>
         new Date(assignment.dueDate) < new Date() &&
         !assignment.submissions.some((submission) => {
@@ -167,7 +162,6 @@ const dashboardPageData = async (req: CustomRequest, res: Response, next: NextFu
         })
       ).length;
 
-      // Calculate due soon assignments for created classrooms
       const dueSoonAssignments = assignments.filter((assignment) =>
         new Date(assignment.dueDate) > new Date() &&
         new Date(assignment.dueDate).getTime() - new Date().getTime() < 7 * 24 * 60 * 60 * 1000 &&
@@ -181,7 +175,6 @@ const dashboardPageData = async (req: CustomRequest, res: Response, next: NextFu
       totalDueSoonAssignmentsCreated += dueSoonAssignments;
       totalOverdueAssignmentsCreated += overdueAssignments;
 
-      // Detailed assignments for created classrooms
       detailedCreatedAssignments.push({
         classroom: classroom.name,
         classroomSubject: classroom.subject,
@@ -208,7 +201,6 @@ const dashboardPageData = async (req: CustomRequest, res: Response, next: NextFu
       });
     });
 
-    // Fetch user's to-do items (not tied to any classroom)
     const userTodos = await Todo.find({ user: id });
 
     await Promise.all([...joinedClassPromises, ...createdClassPromises]);
@@ -245,8 +237,8 @@ const dashboardPageData = async (req: CustomRequest, res: Response, next: NextFu
           lectures: detailedJoinedLectures,
         },
         created: {
-          assignments: detailedCreatedAssignments, // Added detailed assignments here
-          lectures: detailedCreatedLectures,      // Added detailed lectures here
+          assignments: detailedCreatedAssignments,
+          lectures: detailedCreatedLectures,    
         },
         userTodos: userTodos.map((todo) => ({
           title: todo.title,
