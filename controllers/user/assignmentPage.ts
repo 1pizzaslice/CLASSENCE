@@ -46,7 +46,7 @@ const assignmentPageData = async (req: CustomRequest, res: Response, next: NextF
             select: "isGraded",
           },
         },
-      }) as IUser & { joinedClassrooms: IClassroom[], createdClassrooms: IClassroom[] };
+      })as unknown as IUser & { joinedClassrooms: IClassroom[], createdClassrooms: IClassroom[] };
 
     if (!user) {
       next(new CustomError("User not found", 404));
