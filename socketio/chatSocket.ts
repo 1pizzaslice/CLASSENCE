@@ -143,7 +143,7 @@ const getRoomName = {
     developer: (userId: string, devId: string) => `developer_${userId}_${devId}`
 };
 const authorizeUser = async (userId: string, assignmentId: string, studentId: string) => {
-    const assignment = await Assignment.findById(assignmentId).populate('classroom') as IAssignment & { classroom: IClassroom };
+    const assignment = await Assignment.findById(assignmentId).populate('classroom')as unknown as IAssignment & { classroom: IClassroom };
     if (!assignment) return { authorized: false, error: 'Assignment not found' };
 
     const classroom = assignment.classroom;

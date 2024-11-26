@@ -1,104 +1,129 @@
+// recordingManager.ts
 import { S3 } from "aws-sdk";
-import { Readable } from "stream";
+import { PassThrough } from "stream";
 import { Lecture } from "../../models";
 import { CustomError } from "../../types";
 import ffmpeg from "fluent-ffmpeg";
+import { Types } from 'mongoose';
 
-const s3 = new S3({
-    region: process.env.AWS_REGION,
-    accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
-});
+export class RecordingManager {
+    private recordingStream: PassThrough;
+    private uploadPromises: Promise<any>[];
+    private qualities = ["144p", "360p"];
+    private transcodedStreams: Map<string, PassThrough>;
+    private s3Uploads: Map<string, S3.ManagedUpload>;
+    private lectureId: string;
+    private isFinalized: boolean;
+    private finalizationStarted: boolean;
 
-interface SaveRecordingParams {
-    lectureId: string;
-    recordingStream: Readable;
-    fileName: string;
-}
-
-const transcodeAndUpload = async (lectureId: string, recordingStream: Readable, fileName: string): Promise<string[]> => {
-    const lecture = await Lecture.findById(lectureId);
-
-    if (!lecture) {
-        throw new CustomError("Lecture not found", 404);
+    constructor(lectureId: string) {
+        // Remove 'lecture-' prefix if present
+        this.lectureId = lectureId.replace('lecture-', '');
+        this.recordingStream = new PassThrough();
+        this.uploadPromises = [];
+        this.transcodedStreams = new Map();
+        this.s3Uploads = new Map();
+        this.isFinalized = false;
+        this.finalizationStarted = false;
+        this.initializeStreams();
     }
 
-    const qualities = ["144p", "360p"];
-    const uploadedFiles: { quality: string; url: string }[] = [];
+    private initializeStreams() {
+        this.qualities.forEach(quality => {
+            const outputStream = new PassThrough();
+            this.transcodedStreams.set(quality, outputStream);
 
-    try {
-        for (const quality of qualities) {
-            const fileNameWithQuality = `${fileName.replace(/\.webm$/, '')}-${quality}.webm`;
-
-            // Transcoding with error handling
-            const transcodedStream = ffmpeg(recordingStream)
+            ffmpeg(this.recordingStream)
                 .outputFormat("webm")
                 .videoCodec("libvpx")
                 .audioCodec("libvorbis")
                 .size(quality === "144p" ? "144x144" : "360x360")
-                .on("error", (err) => {
-                    console.error(`Error during transcoding for ${quality}:`, err);
-                    throw new CustomError(`Transcoding error for quality ${quality}`, 500);
+                .on("error", (err: Error) => {
+                    if (!this.finalizationStarted) {
+                        console.error(`Transcoding error for ${quality}:`, err);
+                    }
                 })
-                .pipe();
+                .pipe(outputStream);
 
-            // Upload to S3
-            await new Promise<void>((resolve, reject) => {
-                s3.upload({
-                    Bucket: process.env.AWS_BUCKET_NAME!,
-                    Key: `lectures/${fileNameWithQuality}`,
-                    Body: transcodedStream,
+            const upload = new S3.ManagedUpload({
+                params: {
+                    Bucket: process.env.AWS_S3_BUCKET_NAME!,
+                    Key: `lectures/${this.lectureId}-${quality}.webm`,
+                    Body: outputStream,
                     ContentType: "video/webm",
-                })
-                    .on("httpUploadProgress", (progress) => {
-                        console.log(`Upload Progress (${quality}): ${progress.loaded} / ${progress.total}`);
-                    })
-                    .send((err : Error, data: S3.ManagedUpload.SendData) => {
-                        if (err) {
-                            console.error(`Upload error for ${quality}:`, err);
-                            reject(new CustomError(`Upload error for quality ${quality}`, 500, err.message));
-                        } else {
-                            console.log(`Upload complete for ${fileNameWithQuality}`);
-                            uploadedFiles.push({
-                                quality,
-                                url: data.Location,
-                            });
-                            resolve();
-                        }
-                    });
+                }
             });
+
+            this.s3Uploads.set(quality, upload);
+            this.uploadPromises.push(upload.promise());
+        });
+    }
+
+    public pushData(chunk: any) {
+        if (this.isFinalized || this.finalizationStarted) {
+            return;
+        }
+        
+        try {
+            this.recordingStream.write(chunk);
+        } catch (err) {
+            console.error('Error writing chunk:', err);
+        }
+    }
+
+    public async finalize() {
+        if (this.isFinalized || this.finalizationStarted) {
+            return;
         }
 
-        // Save URLs to the lecture document
-        lecture.recordingsURL = uploadedFiles;
-        await lecture.save();
+        this.finalizationStarted = true;
 
-        return uploadedFiles.map((file) => file.url);
-    } catch (error) {
-        console.error("Error during transcoding and uploading:", error);
+        try {
+            // Wait for any remaining data
+            await new Promise(resolve => setTimeout(resolve, 2000));
 
-        // Rollback partially uploaded files
-        await Promise.allSettled(
-            uploadedFiles.map((file) => deleteRecordingFromS3(file.url.split('/').pop()!))
-        );
+            // Gently close streams
+            this.recordingStream.end();
+            
+            // Wait for uploads to complete
+            const results = await Promise.allSettled(this.uploadPromises);
+            const successfulUploads = results
+                .filter((r): r is PromiseFulfilledResult<any> => r.status === 'fulfilled')
+                .map((r, index) => ({
+                    quality: this.qualities[index],
+                    url: r.value.Location
+                }));
 
-        throw new CustomError("Failed to upload recordings to S3", 500, (error as Error).message);
+            if (successfulUploads.length === 0) {
+                throw new Error('No successful uploads');
+            }
+
+            // Update lecture document using valid ObjectId
+            try {
+                const lecture = await Lecture.findById(
+                    new Types.ObjectId(this.lectureId)
+                );
+                
+                if (lecture) {
+                    lecture.recordingsURL = successfulUploads;
+                    await lecture.save();
+                }
+            } catch (err) {
+                console.error('Error updating lecture:', err);
+            }
+
+            this.isFinalized = true;
+            return successfulUploads;
+        } catch (error) {
+            console.error('Finalization error:', error);
+            throw new CustomError("Failed to finalize recording", 500);
+        } finally {
+            // Cleanup streams
+            this.transcodedStreams.forEach(stream => {
+                try {
+                    stream.end();
+                } catch (err) {}
+            });
+        }
     }
-};
-
-const deleteRecordingFromS3 = async (fileName: string): Promise<void> => {
-    try {
-        await s3
-            .deleteObject({
-                Bucket: process.env.AWS_BUCKET_NAME!,
-                Key: `lectures/${fileName}`,
-            })
-            .promise();
-        console.log(`Successfully deleted recording: ${fileName}`);
-    } catch (error) {
-        console.error("Error deleting file from S3:", error);
-        throw new CustomError("Failed to delete recording from S3", 500, (error as Error).message);
-    }
-};
-
-export { transcodeAndUpload, deleteRecordingFromS3 };
+}

@@ -249,7 +249,7 @@ interface StartSessionParams {
             throw new CustomError("Lecture not found", 404);
         }
 
-        if (lecture.status !== LectureStatus.InProgress) {
+        if (lecture.status === LectureStatus.InProgress) {
             throw new CustomError("Lecture is not in progress", 400);
         }
 
@@ -272,9 +272,9 @@ interface StartSessionParams {
             throw new CustomError("Lecture not found", 404);
         }
 
-        if (lecture.status !== LectureStatus.InProgress) {
-            throw new CustomError("Lecture is not currently live", 400);
-        }
+        // if (lecture.status === LectureStatus.Completed) {
+        //     throw new CustomError("Lecture is not currently live", 400);
+        // }
 
         const roomName = `lecture-${lectureId}`;
         socketServer.to(roomName).emit("session-ended", { message: "Live session has ended." });

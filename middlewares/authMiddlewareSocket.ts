@@ -16,7 +16,7 @@ interface AuthError {
 
 const authenticateSocket = async (socket: Socket, next: Function) => {
    const token = socket.handshake.query.token;
-
+    console.log(token);
    if (!token) {
        const error: AuthError = {
            type: 'TOKEN_MISSING',

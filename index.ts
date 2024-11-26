@@ -11,7 +11,6 @@ import {CustomError} from './types';
 import rateLimit from 'express-rate-limit';
 import './services/jobScheduler';
 import {Server} from 'socket.io';
-import http from 'http';
 import path from "path";
 import { chatSocket,liveChatSocket } from "./socketio";
 import './workers/chatWorker';
@@ -27,7 +26,7 @@ process.on('unhandledRejection', (reason, promise) => {
 
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server, {
+const io1 = new Server(server, {
     maxHttpBufferSize: 1e8,
     cors: {
         origin: '*',
@@ -49,10 +48,11 @@ const limiter = rateLimit({
     legacyHeaders: false, 
 });
 
-io.use(socketErrorHandler);
-io.use(authenticateSocket);
-chatSocket(io);
-liveChatSocket(io);
+io1.use(socketErrorHandler);
+io1.use(authenticateSocket);
+chatSocket(io1);
+liveChatSocket(io1);
+configureSocket(io1);
 
 app.use(express.static('public'));
 app.use(limiter);
