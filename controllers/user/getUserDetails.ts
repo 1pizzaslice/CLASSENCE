@@ -20,7 +20,7 @@ const getUserDetails = async (req: CustomRequest, res: Response, next: NextFunct
                 select: "name _id", 
             },
         })
-        .lean() as IUser & {classRooms:IClassroom[]};
+        .lean()as unknown as IUser & {classRooms:IClassroom[]};
         if (!user) {
             next(new CustomError('User not found', 404));
             return;

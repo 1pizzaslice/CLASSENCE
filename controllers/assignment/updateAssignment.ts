@@ -20,7 +20,7 @@ const updateAssignment = async (req: CustomRequest, res: Response, next: NextFun
             path: "teacher",
             select: "_id",
         },
-    }) as IAssignment & {classroom:{teacher:{_id:string}}} ;
+    })as unknown as IAssignment & {classroom:{teacher:{_id:string}}} ;
 
     if (!assignment) {
       return next(new CustomError("Assignment not found", 404));

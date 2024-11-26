@@ -26,7 +26,7 @@ const joinClass = async (req: CustomRequest, res: Response, next: NextFunction) 
             return;
         }
 
-        const classroom = await Classroom.findOne({ code }).populate("teacher","name _id") as IClassroom & {teacher:IUser};
+        const classroom = await Classroom.findOne({ code }).populate("teacher","name _id")as unknown as IClassroom & {teacher:IUser};
         if (!classroom || classroom.isDeleted) {
             next(new CustomError('Classroom not found', 404));
             return;
