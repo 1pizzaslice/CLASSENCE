@@ -155,7 +155,7 @@ const authorizeUser = async (userId: string, assignmentId: string) => {
     // console.log(isTeacher)
     // console.log(isStudent)
 
-    if (!(isTeacher && !isStudent)) return { authorized: false, error: 'You are not authorized to join this chat' };
+    if (!(isTeacher || isStudent)) return { authorized: false, error: 'You are not authorized to join this chat' };
 
     return { authorized: true, isTeacher, classroom, assignment };
 };
