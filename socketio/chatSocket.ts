@@ -94,7 +94,7 @@ const handleChatMessage = async (
     const senderId = socket.user._id;
 
     const room = chatType === 'assignment'
-        ? getRoomName.assignment(chatData.assignmentId!, chatData.studentId!)
+        ? getRoomName.assignment(chatData.assignmentId!)
         : getRoomName.developer(chatData.userId!);
 
     let fileInfo;
@@ -128,7 +128,6 @@ const handleChatMessage = async (
         ...(chatType === 'assignment' 
             ? {
                 assignmentId: chatData.assignmentId,
-                studentId: chatData.studentId,
             } 
             : {
                 userId: chatData.userId
@@ -139,10 +138,10 @@ const handleChatMessage = async (
 };
 
 const getRoomName = {
-    assignment: (assignmentId: string, studentId: string) => `assignment_${assignmentId}_${studentId}`,
+    assignment: (assignmentId: string) => `assignment_${assignmentId}`,
     developer: (userId: string) => `developer_${userId}`
 };
-const authorizeUser = async (userId: string, assignmentId: string, studentId: string) => {
+const authorizeUser = async (userId: string, assignmentId: string) => {
     const assignment = await Assignment.findById(assignmentId).populate('classroom')as unknown as IAssignment & { classroom: IClassroom };
     if (!assignment) return { authorized: false, error: 'Assignment not found' };
 
@@ -156,7 +155,7 @@ const authorizeUser = async (userId: string, assignmentId: string, studentId: st
     // console.log(isTeacher)
     // console.log(isStudent)
 
-    if (!(isTeacher || (isStudent && studentId === userId.toString()))) return { authorized: false, error: 'You are not authorized to join this chat' };
+    if (!(isTeacher && !isStudent)) return { authorized: false, error: 'You are not authorized to join this chat' };
 
     return { authorized: true, isTeacher, classroom, assignment };
 };
@@ -169,54 +168,36 @@ export const chatSocket = (io: Server) => {
 
         socket.on('joinAssignmentChat', async (data) => {
             try {
-                const { assignmentId, studentId  } = data;
+                const { assignmentId  } = data;
                 const userId = customSocket.user._id;
 
-                if (!assignmentId || !studentId) {
-                    return socket.emit('error', 'Assignment ID and Student ID are required.');
+                if (!assignmentId ) {
+                    return socket.emit('error', 'Assignment ID are required.');
                 }
 
-                if (assignmentId.length !== 24 || studentId.length !== 24) {
-                    return socket.emit('error', 'Invalid assignment ID or student ID.');
+                if (assignmentId.length !== 24) {
+                    return socket.emit('error', 'Invalid assignment ID.');
                 }
 
-                const { authorized, error,isTeacher } = await authorizeUser(userId, assignmentId, studentId);
+                const { authorized, error,isTeacher } = await authorizeUser(userId, assignmentId);
                 if (!authorized) return socket.emit('error', error);
 
-                const room = getRoomName.assignment(assignmentId, studentId);
+                const room = getRoomName.assignment(assignmentId);
                 socket.join(room);
 
-                let chat;
-                if(isTeacher){
-                    chat = await Chat.find(
-                        {
-                            assignmentId,
-                            chatType:"assignment"
-                        }
-                    ).populate({
-                        path:"participants",
-                        select:"name"
-                    }).populate({
-                        path:"messages.sender",
-                        select:"name"
-                    })
-                }else{
-                    chat =await Chat.find(
-                        {
-                            assignmentId,
-                            participants: studentId,
-                            chatType:"assignment"
-                        }
-                    ).populate({
-                        path:"messages.sender",
-                        select:"name"
-                    }).populate({
-                        path:"participants",
-                        select:"name"
-                    })
-                }
-
-
+                let chat= await Chat.find(
+                    {
+                        assignmentId,
+                        chatType:"assignment"
+                    }
+                ).populate({
+                    path:"participants",
+                    select:"name"
+                }).populate({
+                    path:"messages.sender",
+                    select:"name"
+                })
+                //  console.log(chat)
                 socket.emit('chatHistory', chat);
                 socket.emit('success', `Joined chat for assignment: ${assignmentId}`);
             } catch (err) {
@@ -224,39 +205,12 @@ export const chatSocket = (io: Server) => {
                 socket.emit('error', 'An error occurred while joining the chat.');
             }
         });
-        socket.on('getTeacherChats', async (data) => {
-            try {
-                const { assignmentId } = data;
-
-                const myId = customSocket.user._id;
-                const assignment = await Assignment.findById(assignmentId).populate('classroom')as unknown as IAssignment & { classroom: IClassroom };
-                if (!assignment) {
-                    return socket.emit('error', 'Assignment not found');
-                }
-                if(assignment.classroom.teacher.toString() !== myId.toString()){
-                    return socket.emit('notTeacher', 'User is not a teacher');
-                }
-                const chats = await Chat.find({chatType:"assignment",assignmentId}).populate({
-                    path:"messages.sender",
-                    select:"name"
-                }).populate({
-                    path:"participants",
-                    select:"name"
-                });
-                // console.log(chats)
-                socket.emit('AssignemntChats', chats);
-                socket.emit("success","Assignment chats fetched successfully")
-            } catch (err) {
-                console.error('Error getting Assignment chats:', err);
-                socket.emit('notTeacher', 'An error occurred while getting Assignment chats');
-            }
-        });
 
         socket.on('assignmentChatMessage', async (chatData) => {
             try {
-                const { assignmentId, studentId, message, file } = chatData;
+                const { assignmentId, message, file } = chatData;
                 
-                if (!assignmentId || !studentId || (!message && !file)) {
+                if (!assignmentId || (!message && !file)) {
                     return socket.emit('error', 'Invalid chat data');
                 }
 

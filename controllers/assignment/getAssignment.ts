@@ -1,6 +1,8 @@
 import { Response, NextFunction } from "express";
 import { CustomError, CustomRequest } from "../../types";
 import { Assignment, Classroom } from "../../models";
+import moment from 'moment-timezone';
+
 
 const getAssignments = async (req: CustomRequest, res: Response, next: NextFunction) => {
   const { classroomId } = req.query;
@@ -34,8 +36,13 @@ const getAssignments = async (req: CustomRequest, res: Response, next: NextFunct
         })
         .sort({ createdAt: -1 });
     }
+    const formattedAssignments = assignments.map(assignment => ({
+      ...assignment.toObject(),
+      createdAt: moment(assignment.createdAt).tz('Asia/Kolkata').format('YYYY-MM-DD HH:mm:ss'),
+      dueDate: moment(assignment.dueDate).tz('Asia/Kolkata').format('YYYY-MM-DD HH:mm:ss')
+    }));
 
-    res.status(200).json(assignments);
+    res.status(200).json(formattedAssignments);
   } catch (error) {
     next(new CustomError("Failed to get assignments", 500, (error as Error).message));
   }
