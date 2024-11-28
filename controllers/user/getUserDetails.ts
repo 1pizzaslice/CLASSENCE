@@ -11,7 +11,7 @@ const getUserDetails = async (req: CustomRequest, res: Response, next: NextFunct
         return;
     }
     try {
-        const user = await User.findById(id, "name _id classRooms")
+        const user = await User.findById(id, "name _id classRooms email")
         .populate({
             path: "classRooms",
             select: "name subject _id teacher code students",
