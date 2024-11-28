@@ -18,7 +18,7 @@ router.post("/create", createLecture);
 
 router.get("/", getLectures);
 
-router.delete("/delete", deleteLecture);
+router.delete("/delete/:id", deleteLecture);
 
 router.patch("/update", updateLecture);
 
