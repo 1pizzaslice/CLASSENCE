@@ -3,6 +3,9 @@ import { CustomError, CustomRequest } from "../../types";
 import {Announcement, Classroom, User} from '../../models';
 import fs from 'fs';
 import {cloudinary} from '../../config'
+import { Upload } from '@aws-sdk/lib-storage';
+import {S3} from '../../config';
+import {v4 as uuidv4} from 'uuid';
 
 const createAnnouncement = async (req: CustomRequest, res: Response , next:NextFunction) => {
   const { title, description, poll,code } = req.body;
@@ -14,36 +17,77 @@ const createAnnouncement = async (req: CustomRequest, res: Response , next:NextF
   const mediaUrls = []; // cloudinary urls
 
   try {
-    const [user,classroom] = await Promise.all([User.findById(req.user._id),Classroom.findOne({code})]);
-    if(!user){
-      next(new CustomError('User not found',404));
-      return;
-    }
+    const data = await Classroom.aggregate([
+      { $match: { code } },
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'students',
+          foreignField: '_id',
+          as: 'students'
+        }
+      },
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'teacher',
+          foreignField: '_id',
+          as: 'teacherInfo'
+        }
+      },
+      {
+        $project: {
+          _id: 1,
+          code: 1,
+          teacher: 1,
+          teacherInfo: { _id: 1, classRooms: 1 },
+          isDeleted: 1,
+          students: { _id: 1, email: 1, name: 1 },
+          announcements: 1
+        }
+      }
+    ]);
+
+    const classroom = data[0];
+    // console.log(classroom);
     if(!classroom || classroom.isDeleted){
       next(new CustomError('Classroom not found',404));
       return;
     }
-    if(!user.classRooms.includes(classroom._id) || classroom.teacher.toString() !== user._id.toString()){
-      next(new CustomError('You are not authorized to create announcement in this classroom',403));
+    const teacher = classroom.teacherInfo[0];
+    if (!teacher) {
+      next(new CustomError('Teacher not found', 404));
       return;
     }
     
-    if (files && files.length > 0) {
-      for (const file of files) {
-        const result = await cloudinary.uploader.upload(file.path, {
-          resource_type: 'auto',
-          folder: 'announcements', // cloudinary folder
-        });
 
-        mediaUrls.push(result.secure_url);
+    const isClassroomIncluded = teacher.classRooms.some((room:string) => room.toString() === classroom._id.toString());
 
-        fs.unlink(file.path, (err) => {
-          if (err) {
-            console.error(`Failed to delete local file: ${file.path}`, err);
-          }
-        });
-      }
+    if (!isClassroomIncluded || teacher._id.toString() !== req.user._id.toString()) {
+      next(new CustomError('You are not authorized to create announcements in this classroom', 403));
+      return;
     }
+
+    if (files && files.length > 0) {
+      const uploadPromises = files.map(async (file) => {
+        const key = `announcements/${uuidv4()}-${file.originalname}`;
+        const upload = new Upload({
+          client: S3,
+          params: {
+            Bucket: process.env.AWS_S3_BUCKET_NAME,
+            Key: key,
+            Body: fs.createReadStream(file.path),
+            ContentType: file.mimetype,
+          },
+        });
+        const result = await upload.done();
+        fs.unlink(file.path, () => {});
+        return result.Location;
+      });
+    
+      mediaUrls.push(...(await Promise.all(uploadPromises)));
+    }
+    
 
 
     const newAnnouncement = new Announcement({
@@ -55,7 +99,15 @@ const createAnnouncement = async (req: CustomRequest, res: Response , next:NextF
       createdBy:req.user?._id
   });
   
-    await Promise.all([newAnnouncement.save(),classroom.updateOne({$push:{announcements:newAnnouncement._id}})]);
+    await Promise.all([
+      newAnnouncement.save(),
+      Classroom.findByIdAndUpdate(
+        classroom._id,
+        { $push: { announcements: newAnnouncement._id } },
+        { new: true }
+      )
+    ]);
+  
     res.status(201).json({success:true, message: 'Announcement created successfully', announcement: newAnnouncement });
   } catch (error) {
     const err = error as Error;

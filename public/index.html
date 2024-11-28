@@ -126,7 +126,7 @@
         let localStream;
         const peerConnections = new Map();
         let mediaRecorder;
-        const socketServerUrl = 'http://10.10.147.62:5000';
+        const socketServerUrl = 'http://localhost:5000';
         let isTeacher = false;
         let isNegotiating = false;
 
@@ -246,7 +246,7 @@
                 socket.disconnect();
             }
 
-            socket = io("http://10.10.147.62:5001", {
+            socket = io("http://localhost:5001", {
                 query: { token },
                 autoConnect: false,
                 reconnection: true,

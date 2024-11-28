@@ -57,6 +57,7 @@ const getUserDetails = async (req: CustomRequest, res: Response, next: NextFunct
             user: {
                 _id: user._id,
                 name: user.name,
+                email:user.email,
                 createdAt: user.createdAt,
                 createdClasses,
                 joinedClasses,
