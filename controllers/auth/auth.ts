@@ -80,10 +80,10 @@ export const loginUser = async (req: CustomRequest, res: Response , next: NextFu
         }
         
         const token = jwt.sign({ _id: req.user?._id,version:user.version }, process.env.JWT_SECRET as string , {
-            expiresIn: '1h'
+            expiresIn: '24h'
         });
         const refreshToken = jwt.sign({ _id: req.user?._id,version:user.version }, process.env.JWT_SECRET as string , {
-            expiresIn: '1d'
+            expiresIn: '7d'
         });
     
         res.header('Authorization', `Bearer ${token}`).send({

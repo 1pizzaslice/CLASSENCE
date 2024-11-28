@@ -1,4 +1,3 @@
-// socket.ts
 import { Server, Socket } from "socket.io";
 import { CustomSocket } from '../types';
 import { PassThrough } from 'stream';
@@ -41,7 +40,6 @@ const configureSocket = (io: Server) => {
       console.log(lectureId)
       const lecture = await  Lecture.findById(lectureId);
       const isTeacher = lecture?.teacher.toString() === customSocket.user._id.toString();
-
       if (isTeacher) {
         room.teacherId = socket.id;
       } else {
