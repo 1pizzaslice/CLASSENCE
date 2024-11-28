@@ -3,6 +3,7 @@ import { CustomError, CustomRequest } from "../../types";
 import { Lecture , Classroom } from "../../models";
 import { LectureStatus } from "../../models/Lecture";
 import { Server } from "socket.io";
+import moment from 'moment-timezone';
 
 const createLecture = async (req: CustomRequest, res: Response, next: NextFunction) => {
     const { title, description, startTime, code } = req.body;
@@ -77,11 +78,15 @@ const getLectures = async (req: CustomRequest, res: Response, next: NextFunction
                 select: 'name subject code',
             })
             .sort({ startTime: 1 });
-
+        const formattedLectures = lectures.map(lecture => ({
+            ...lecture.toObject(),
+            startTime: moment(lecture.startTime).tz('Asia/Kolkata').format('YYYY-MM-DD HH:mm:ss'),
+            createdAt: moment(lecture.createdAt).tz('Asia/Kolkata').format('YYYY-MM-DD HH:mm:ss'),
+        }));
         res.status(200).json({
             success: true,
             message: "Lectures fetched successfully",
-            lectures
+            formattedLectures
         });
     } catch (error) {
         next(new CustomError("Failed to get lectures", 500, (error as Error).message));
