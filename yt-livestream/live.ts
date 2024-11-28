@@ -2,11 +2,60 @@ import { google, youtube_v3 } from 'googleapis';
 import { GaxiosResponse , GaxiosPromise } from 'googleapis-common';
 import fs from 'fs';
 import dotenv from 'dotenv';
+import os from 'os';
 import ffmpeg from 'fluent-ffmpeg'; 
 import { spawn } from 'child_process';
 
 dotenv.config();
 
+
+const inputSource = process.env.INPUT_SOURCE || 'default';
+const fullRtmpUrl = process.env.RTMP_URL || 'rtmp://your.rtmp.server/live/streamkey'; 
+
+let sourceConfig: {
+  input: string;
+  format: string 
+};
+
+  if (os.platform() === 'win32') {
+    if (inputSource === 'screen') {
+      sourceConfig = {
+        input: 'video="screen-capture-recorder"', // Screen capture on Windows
+        format: 'dshow',
+      };
+    } else {
+      sourceConfig = {
+        input: `video=${inputSource}`, // Webcam (or user-specified device)
+        format: 'dshow',
+      };
+    }
+  } else if (os.platform() === 'linux') {
+    if (inputSource === 'screen') {
+      sourceConfig = {
+        input: ':0.0', // Screen capture on Linux
+        format: 'x11grab',
+      };
+    } else {
+      sourceConfig = {
+        input: '/dev/video0', // Default webcam on Linux
+        format: 'v4l2',
+      };
+    }
+  } else if (os.platform() === 'darwin') {
+    if (inputSource === 'screen') {
+      sourceConfig = {
+        input: '1:none', // Screen capture on macOS
+        format: 'avfoundation',
+      };
+    } else {
+      sourceConfig = {
+        input: '0', // Default webcam on macOS
+        format: 'avfoundation',
+      };
+    }
+  } else {
+    throw new Error('Unsupported operating system for FFmpeg input.');
+  }
 interface YouTubeConfig {
   clientId: string;
   clientSecret: string;
@@ -204,29 +253,27 @@ async sendVideoToStream(streamDetails: StreamDetails): Promise<void> {
 
     // Stream live video from the camera or other source (e.g., webcam)
     const ffmpegCommand = ffmpeg()
-      .input('video=YOUR_WEBCAM_DEVICE_NAME')  // Replace with your actual webcam device
-      .inputOptions('-f', 'dshow')  // Windows specific (for other OS, adjust the input accordingly)
-      .outputOptions('-f', 'flv') // Output format must be FLV for RTMP
-      .output(fullRtmpUrl)
-      .videoCodec('libx264') // Video codec
-      .audioCodec('aac') // Audio codec
-      .audioBitrate(128) // Audio bitrate
-      .videoBitrate(2000) // Video bitrate (adjust as needed)
-      .on('start', commandLine => {
-        console.log('FFmpeg process started:', commandLine);
-      })
-      .on('progress', progress => {
-        console.log(
-          `Progress: ${progress.timemark}, Frames: ${progress.frames}`
-        );
-      })
-      .on('error', error => {
-        console.error('FFmpeg encountered an error:', error.message);
-        throw error;
-      })
-      .on('end', () => {
-        console.log('Live streaming completed successfully.');
-      });
+    .input(sourceConfig.input)
+    .inputFormat(sourceConfig.format)
+    .outputOptions('-f', 'flv') // Output format must be FLV for RTMP
+    .output(fullRtmpUrl)
+    .videoCodec('libx264') // Video codec
+    .audioCodec('aac') // Audio codec
+    .audioBitrate(128) // Audio bitrate
+    .videoBitrate(2000) // Video bitrate (adjust as needed)
+    .on('start', commandLine => {
+      console.log('FFmpeg process started:', commandLine);
+    })
+    .on('progress', progress => {
+      console.log(`Progress: ${progress.timemark}, Frames: ${progress.frames}`);
+    })
+    .on('error', error => {
+      console.error('FFmpeg encountered an error:', error.message);
+      throw error;
+    })
+    .on('end', () => {
+      console.log('Live streaming completed successfully.');
+    });
 
     ffmpegCommand.run();
   } catch (error) {
