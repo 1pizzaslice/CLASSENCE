@@ -37,6 +37,7 @@ export interface ILecture extends Document {
     startedAt?: Date;
     completedAt?: Date;
   };
+  createdAt: Date;
 }
 
 const AttendanceSchema = new Schema(
