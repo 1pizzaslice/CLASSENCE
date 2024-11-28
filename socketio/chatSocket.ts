@@ -201,7 +201,7 @@ export const chatSocket = (io: Server) => {
                         select:"name"
                     })
                 }else{
-                    chat =await Chat.findOne(
+                    chat =await Chat.find(
                         {
                             assignmentId,
                             participants: studentId,
