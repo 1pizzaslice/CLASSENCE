@@ -14,6 +14,13 @@ import {Server} from 'socket.io';
 import path from "path";
 import { chatSocket,liveChatSocket } from "./socketio";
 import './workers/chatWorker';
+import { YouTubeLiveStreamService, YouTubeConfig, StreamDetails } from './yt-livestream';
+
+const youtubeConfig = {
+    clientId: process.env.YOUTUBE_CLIENT_ID!,
+    clientSecret: process.env.YOUTUBE_CLIENT_SECRET!,
+    redirectUri: process.env.YOUTUBE_REDIRECT_URI || 'http://localhost:3000/oauth2callback',
+  };
 
 process.on('uncaughtException', (error) => {
     console.error('Uncaught Exception:', error);
@@ -71,7 +78,17 @@ app.use("/api/submission",verify,submissionRoute);
 app.use("/api/todo",verify,todoRoute);
 app.use("/api/lecture",verify,lectureRoute);
 app.use("/api/reminder",verify,reminderRoute);
+app.use(express.static(path.join(__dirname, 'public')));
 // app.use("/lectures", lectureRoute);
+app.post('/api/youtube/start-stream', async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const youtubeService = new YouTubeLiveStreamService(youtubeConfig);
+      const streamDetails = await youtubeService.createLiveStream();
+      res.status(200).json({ success: true, streamDetails });
+    } catch (error) {
+      next(new CustomError('Failed to start YouTube stream', 500, (error as Error).message));
+    }
+  });
 
 app.use('*', (req: Request, res: Response,next:NextFunction) => {
     const error = new CustomError('Resource not found!!!!', 404);
