@@ -53,6 +53,7 @@ const createTodo = async (req: CustomRequest, res: Response, next: NextFunction)
         res.status(201).json({
             success: true,
             message: "Todo created successfully",
+            todo: newTodo
         });
     } catch (error) {
         next(new CustomError("Failed to create todo", 500, (error as Error).message));

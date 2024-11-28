@@ -17,7 +17,8 @@ io.on("connection", (socket:Socket) => {
     const room1 = `${myId}-${userToCallId}`;
     const room2 = `${userToCallId}-${myId}`;
     let room;
-
+    // console.log(io.sockets.adapter.rooms);
+    // console.log(room1, room2);
     if (io.sockets.adapter.rooms.get(room1)) {
       room = room1;
     } else if (io.sockets.adapter.rooms.get(room2)) {
@@ -31,9 +32,9 @@ io.on("connection", (socket:Socket) => {
         return;
       }
 
-    io.to(room).emit("user:joined", { myId, id: socket.id });
+    io.to(room).emit("user:joined", { room, id: socket.id });
     socket.join(room);
-    io.to(socket.id).emit("room:join", data);
+    io.to(socket.id).emit("room:join", {room, id: socket.id});
   });
 
   socket.on("user:call", ({ to, offer }) => {
@@ -45,12 +46,12 @@ io.on("connection", (socket:Socket) => {
   });
 
   socket.on("peer:nego:needed", ({ to, offer }) => {
-    console.log("peer:nego:needed", offer);
+    // console.log("peer:nego:needed", offer);
     io.to(to).emit("peer:nego:needed", { from: socket.id, offer });
   });
 
   socket.on("peer:nego:done", ({ to, ans }) => {
-    console.log("peer:nego:done", ans);
+    // console.log("peer:nego:done", ans);
     io.to(to).emit("peer:nego:final", { from: socket.id, ans });
   });
   socket.on("disconnect", () => {
