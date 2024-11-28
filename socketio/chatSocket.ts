@@ -224,6 +224,33 @@ export const chatSocket = (io: Server) => {
                 socket.emit('error', 'An error occurred while joining the chat.');
             }
         });
+        socket.on('getTeacherChats', async (data) => {
+            try {
+                const { assignmentId } = data;
+
+                const myId = customSocket.user._id;
+                const assignment = await Assignment.findById(assignmentId).populate('classroom')as unknown as IAssignment & { classroom: IClassroom };
+                if (!assignment) {
+                    return socket.emit('error', 'Assignment not found');
+                }
+                if(assignment.classroom.teacher.toString() !== myId.toString()){
+                    return socket.emit('notTeacher', 'User is not a teacher');
+                }
+                const chats = await Chat.find({chatType:"assignment",assignmentId}).populate({
+                    path:"messages.sender",
+                    select:"name"
+                }).populate({
+                    path:"participants",
+                    select:"name"
+                });
+                // console.log(chats)
+                socket.emit('AssignemntChats', chats);
+                socket.emit("success","Assignment chats fetched successfully")
+            } catch (err) {
+                console.error('Error getting Assignment chats:', err);
+                socket.emit('notTeacher', 'An error occurred while getting Assignment chats');
+            }
+        });
 
         socket.on('assignmentChatMessage', async (chatData) => {
             try {
