@@ -95,7 +95,7 @@ const handleChatMessage = async (
 
     const room = chatType === 'assignment'
         ? getRoomName.assignment(chatData.assignmentId!, chatData.studentId!)
-        : getRoomName.developer(chatData.userId!, senderId);
+        : getRoomName.developer(chatData.userId!);
 
     let fileInfo;
     console.log(file)
@@ -140,7 +140,7 @@ const handleChatMessage = async (
 
 const getRoomName = {
     assignment: (assignmentId: string, studentId: string) => `assignment_${assignmentId}_${studentId}`,
-    developer: (userId: string, devId: string) => `developer_${userId}_${devId}`
+    developer: (userId: string) => `developer_${userId}`
 };
 const authorizeUser = async (userId: string, assignmentId: string, studentId: string) => {
     const assignment = await Assignment.findById(assignmentId).populate('classroom')as unknown as IAssignment & { classroom: IClassroom };
@@ -239,7 +239,27 @@ export const chatSocket = (io: Server) => {
                 socket.emit('error', err instanceof Error ? err.message : 'An error occurred');
             }
         });
-
+        socket.on('getDevChats', async (data) => {
+            try {
+                const myId = customSocket.user._id;
+                const user = await User.findById(myId).select("isAdmin");
+                if(!user || !user.isAdmin) {
+                    return socket.emit('notAdmin', 'User is not an admin');
+                }
+                const chats = await Chat.find({chatType:"developer"}).populate({
+                    path:"messages.sender",
+                    select:"name"
+                }).populate({
+                    path:"participants",
+                    select:"name"
+                });
+                socket.emit('devChats', chats);
+                socket.emit("success","Developer chats fetched successfully")
+            } catch (err) {
+                console.error('Error getting developer chats:', err);
+                socket.emit('notAdmin', 'An error occurred while getting developer chats');
+            }
+        });
         socket.on('joinDeveloperChat', async (data) => {
             try {
                 const {userId} = data; 
