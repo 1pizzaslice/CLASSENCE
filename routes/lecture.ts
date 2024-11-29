@@ -8,6 +8,7 @@ import {
     stopLiveSession,
 } from "../controllers";
 import { Server } from "socket.io";
+import { markAttendance } from "../controllers/lecture/Lecture";
 
 const router = express.Router();
 const io = new Server();
@@ -20,7 +21,7 @@ router.delete("/delete", deleteLecture);
 
 router.patch("/update", updateLecture);
 
-
+router.post("/mark",markAttendance)
 router.post("/start-live-session", async (req, res, next) => {
     const { lectureId } = req.body;
     try {
