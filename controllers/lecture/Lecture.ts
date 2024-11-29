@@ -83,7 +83,9 @@ const getLectures = async (req: CustomRequest, res: Response, next: NextFunction
 
         const futureLectures = await Lecture.find({ 
                 classroom: classroom._id,
-                startTime: { $gt: new Date() }
+                startTime: { $gt: new Date(),
+                status: "Scheduled"
+                 }
             })
             .populate({
                 path: 'teacher',
@@ -215,7 +217,8 @@ interface StartSessionParams {
 
         const roomName = `lecture-${lectureId}`;
         socketServer.to(roomName).emit("session-started", { message: "Live session has started." });
-
+        lecture.status = LectureStatus.InProgress;
+        await lecture.save();
         console.log(`Live session started for lecture: ${lectureId}`);
         return roomName;
     } catch (error) {
