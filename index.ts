@@ -1,7 +1,7 @@
 import dotenv from "dotenv"; 
 dotenv.config();
 import http from "http";
-import configureSocket from "./config/socket";
+import configureSocket from "./config/webrtc";
 import {reminderRoute,authRoute,classroomRoute,announcementRoute,userRoute,assignmentRoute,lectureRoute,submissionRoute,todoRoute} from './routes/';
 import  connectDB  from './db/connect';
 import express, { Request, Response, NextFunction } from 'express';
