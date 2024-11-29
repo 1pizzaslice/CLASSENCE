@@ -169,4 +169,4 @@ class YouTubeLiveStreamService {
   }
 }
 
-export { YouTubeLiveStreamService };
+export { YouTubeLiveStreamService,YouTubeConfig };
