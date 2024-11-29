@@ -1,7 +1,7 @@
 import dotenv from "dotenv"; 
 dotenv.config();
 import http from "http";
-import configureSocket from "./config/webrtc";
+import {configureWebrtc,configureSocket} from "./config";
 import {reminderRoute,authRoute,classroomRoute,announcementRoute,userRoute,assignmentRoute,lectureRoute,submissionRoute,todoRoute} from './routes/';
 import  connectDB  from './db/connect';
 import express, { Request, Response, NextFunction } from 'express';
@@ -14,6 +14,7 @@ import {Server} from 'socket.io';
 import path from "path";
 import { chatSocket,liveChatSocket } from "./socketio";
 import './workers/chatWorker';
+
 
 process.on('uncaughtException', (error) => {
     console.error('Uncaught Exception:', error);
@@ -52,6 +53,7 @@ io1.use(socketErrorHandler);
 io1.use(authenticateSocket);
 chatSocket(io1);
 liveChatSocket(io1);
+configureWebrtc(io1);
 configureSocket(io1);
 
 app.use(express.static('public'));
@@ -71,6 +73,7 @@ app.use("/api/submission",verify,submissionRoute);
 app.use("/api/todo",verify,todoRoute);
 app.use("/api/lecture",verify,lectureRoute);
 app.use("/api/reminder",verify,reminderRoute);
+app.use(express.static(path.join(__dirname, 'public')));
 // app.use("/lectures", lectureRoute);
 
 app.use('*', (req: Request, res: Response,next:NextFunction) => {
