@@ -185,7 +185,9 @@ const updateLecture = async (req: CustomRequest, res: Response, next: NextFuncti
     }
 };
 
+const joinLecture = async (req: CustomRequest, res: Response, next: NextFunction) => {
 
+}
 
 
 interface StartSessionParams {
@@ -272,7 +274,10 @@ const markAttendance = async (req: CustomRequest, res: Response, next: NextFunct
             next(new CustomError("You are not authorized to mark attendance for this lecture", 403));
             return;
         }
-
+        if (lecture.status !== LectureStatus.InProgress || lecture.youtubeLiveStreamURL === "") {
+            next(new CustomError("Lecture is not in progress", 400));
+            return;
+        }
         const attendanceRecord = lecture.attendance.find(record => record.student.toString() === id);
 
         if (attendanceRecord) {
@@ -288,6 +293,14 @@ const markAttendance = async (req: CustomRequest, res: Response, next: NextFunct
         res.status(200).json({
             success: true,
             message: "Attendance marked successfully",
+            lecture:{
+                title: lecture.title,
+                description: lecture.description,
+                startTime: moment(lecture.startTime).tz('Asia/Kolkata').format('YYYY-MM-DD HH:mm:ss'),
+                status: lecture.status,
+                classroom: lecture.classroom,
+                youtubeLiveStreamURL: lecture.youtubeLiveStreamURL,
+            }
         });
     } catch (error) {
         next(new CustomError("Failed to mark attendance", 500, (error as Error).message));
