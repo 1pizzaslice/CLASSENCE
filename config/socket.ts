@@ -1,66 +1,166 @@
 import { Server, Socket } from "socket.io";
 import { CustomSocket } from '../types';
+import { PassThrough } from 'stream';
+import { Lecture } from "../models";
+import { YouTubeLiveStreamService } from '../yt-livestream';
+import ffmpeg from 'fluent-ffmpeg';
+
+interface Room {
+  id: string;
+  teacherId?: string;
+  streamingStream?: PassThrough;
+  ffmpegCommand?: ffmpeg.FfmpegCommand;
+}
 
 const configureSocket = (io: Server) => {
+  const rooms = new Map<string, Room>();
 
-const userIdToSocketIdMap = new Map();
-const socketIdToUserMap = new Map();
+  io.on("connection", (socket: Socket) => {
+    const customSocket = socket as CustomSocket;
+    console.log(`Socket connected: ${socket.id}`);
 
-io.on("connection", (socket:Socket) => {
-  const customSocket = socket as CustomSocket;
-  console.log(`Socket Connected`, socket.id);
-  socket.on("room:join", (data) => {
-    const { userToCallId } = data;
-    const myId = customSocket.user._id;
-    userIdToSocketIdMap.set(myId, socket.id);
-    socketIdToUserMap.set(socket.id, myId);
-    const room1 = `${myId}-${userToCallId}`;
-    const room2 = `${userToCallId}-${myId}`;
-    let room;
-    // console.log(io.sockets.adapter.rooms);
-    // console.log(room1, room2);
-    if (io.sockets.adapter.rooms.get(room1)) {
-      room = room1;
-    } else if (io.sockets.adapter.rooms.get(room2)) {
-      room = room2;
-    } else {
-      room = room1; 
-    }
-    const roomSize = io.sockets.adapter.rooms.get(room)?.size || 0;
-      if (roomSize >= 2) {
-        socket.emit('room-full', { message: 'Room is full' });
-        return;
+    socket.on("join-room", async (roomId: string) => {
+      if (!rooms.has(roomId)) {
+        rooms.set(roomId, {
+          id: roomId
+        });
       }
 
-    io.to(room).emit("user:joined", { room, id: socket.id });
-    socket.join(room);
-    io.to(socket.id).emit("room:join", {room, id: socket.id});
-  });
+      const room = rooms.get(roomId)!;
+      const lectureId = roomId.replace('lecture-', '');
+      const lecture = await Lecture.findById(lectureId);
+      const isTeacher = lecture?.teacher.toString() === customSocket.user._id.toString();
 
-  socket.on("user:call", ({ to, offer }) => {
-    io.to(to).emit("incomming:call", { from: socket.id, offer });
-  });
+      if (isTeacher) {
+        room.teacherId = customSocket.user._id;
+      }
 
-  socket.on("call:accepted", ({ to, ans }) => {
-    io.to(to).emit("call:accepted", { from: socket.id, ans });
-  });
+      socket.join(roomId);
+      
+      console.log(`Socket ${socket.id} joined room: ${roomId} as ${isTeacher ? 'teacher' : 'viewer'}`);
 
-  socket.on("peer:nego:needed", ({ to, offer }) => {
-    // console.log("peer:nego:needed", offer);
-    io.to(to).emit("peer:nego:needed", { from: socket.id, offer });
-  });
+      if (room.teacherId) {
+        io.to(socket.id).emit('ready-to-call');
+      }
+    });
 
-  socket.on("peer:nego:done", ({ to, ans }) => {
-    // console.log("peer:nego:done", ans);
-    io.to(to).emit("peer:nego:final", { from: socket.id, ans });
+    socket.on("start-streaming", async (roomId: string) => {
+      const room = rooms.get(roomId);
+      console.log('Starting streaming for room:', roomId);
+      if (room && customSocket.user._id === room.teacherId) {
+        room.streamingStream = new PassThrough();
+
+        const youTubeService = new YouTubeLiveStreamService();
+        const { streamKey, streamUrl, broadcastId, streamId } = await youTubeService.createStream();
+        const url = `${streamUrl}/${streamKey}`;
+
+        const ffmpegCommand = ffmpeg()
+          .input(room.streamingStream)
+          .inputFormat('webm')
+          .outputOptions(
+            '-f', 'flv',
+            '-pix_fmt', 'yuv420p',
+            '-c:v', 'libx264',
+            '-qp:v', '19',
+            '-profile:v', 'high',
+            '-tune:v', 'zerolatency',
+            '-preset:v', 'ultrafast',
+            '-rc:v', 'cbr_ld_hq',
+            '-level:v', '4.2',
+            '-r:v', '60',
+            '-g:v', '120',
+            '-bf:v', '3',
+            '-refs:v', '16'
+          )
+          .output(url)
+          .videoCodec('libx264')
+          .audioCodec('aac')
+          .audioBitrate(128)
+          .videoBitrate(2000)
+          .on('start', commandLine => {
+            console.log('FFmpeg process started:', commandLine);
+          })
+          .on('progress', progress => {
+          })
+          .on('stderr', stderrLine => {
+            console.log('Stderr output:', stderrLine);
+          })
+          .on('error', error => {
+            console.error('FFmpeg encountered an error:', error.message);
+            throw error;
+          })
+          .on('end', () => {
+            console.log('Live streaming completed successfully.');
+          });
+
+        ffmpegCommand.run();
+        room.ffmpegCommand = ffmpegCommand;
+
+        await youTubeService.waitForStreamToBecomeActive(streamId);
+        await youTubeService.transitionBroadcast(broadcastId, "testing");
+        console.log("Broadcast transitioned to testing.");
+          await youTubeService.waitForBroadcastToBeInTesting(broadcastId);
+        await youTubeService.transitionBroadcast(broadcastId, "live");
+        console.log("Broadcast is now live.");
+        const videoUrl = await youTubeService.getBroadcastDetails(broadcastId);
+        const lecture = await Lecture.findById(roomId.replace('lecture-', ''));
+        lecture?.updateOne({ youtubeLiveStreamURL: videoUrl }).exec();
+        socket.emit('youtube-video-url', { url: videoUrl });
+      }
+    });
+
+    socket.on("streaming-data", async (data: { roomId: string, chunk: any }) => {
+      const room = rooms.get(data.roomId);
+      if (room?.streamingStream && customSocket.user._id === room.teacherId) {
+        const buffer = Buffer.from(new Uint8Array(data.chunk));
+        console.log('Received streaming data, buffer length:', buffer.length);
+                if (!room.streamingStream.destroyed && room.streamingStream.writable) {
+          room.streamingStream.write(buffer, (err) => {
+            if (err) {
+              console.error('Error writing to streamingStream:', err);
+              socket.emit('streaming-error', err.message);
+            }
+          });
+        } else {
+          console.warn('Streaming stream is not writable');
+        }
+      }
+    });
+
+    socket.on("stop-streaming", async (roomId: string) => {
+      const room = rooms.get(roomId);
+      if (room && customSocket.user._id === room.teacherId) {
+        try {
+          if (room.streamingStream) {
+            room.streamingStream.end();
+          }
+          if (room.ffmpegCommand) {
+            room.ffmpegCommand.kill('SIGINT');
+          }
+        } catch (error) {
+          console.log(error);
+        }
+      }
+    });
+
+    socket.on("disconnect", async () => {
+      rooms.forEach(room => {
+        try {
+          if (room.teacherId === customSocket.user._id) {
+            if (room.streamingStream) {
+              room.streamingStream.end();
+            }
+            if (room.ffmpegCommand) {
+              room.ffmpegCommand.kill('SIGINT');
+            }
+            room.teacherId = undefined;
+          }
+        } catch (error) {
+          console.log(error);
+        }
+      });
+    });
   });
-  socket.on("disconnect", () => {
-    const userId = socketIdToUserMap.get(socket.id);
-    userIdToSocketIdMap.delete(userId);
-    socketIdToUserMap.delete(socket.id);
-    console.log(`Socket disconnected: ${socket.id}`);
-  });
-});
 };
 
 export default configureSocket;

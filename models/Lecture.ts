@@ -20,17 +20,10 @@ export interface ILecture extends Document {
   status: LectureStatus;
   classroom: Schema.Types.ObjectId;
   teacher: Schema.Types.ObjectId;
-  recordingsURL:{
-      quality:string,
-      url:string
-  }[];
+  youtubeLiveStreamURL?: string;
   attendance: {
     student: Schema.Types.ObjectId;
-    joinedDuration: number;
     status: AttendanceStatus;
-    lastJoined?: Date;
-    reasonForAbsence?: string;
-    joinCount?: number;
   }[];
   statusTimestamps?: {
     scheduledAt: Date;
@@ -47,29 +40,11 @@ const AttendanceSchema = new Schema(
       ref: "User",
       required: true 
     },
-    joinedDuration: {
-      type: Number,
-      default: 0,
-      min: 0 
-    },
     status: {
       type: String,
       enum: Object.values(AttendanceStatus),
       default: AttendanceStatus.Absent,
-    },
-    lastJoined: { 
-      type: Date, 
-      default: null 
-    },
-    reasonForAbsence: { 
-      type: String, 
-      default: null, 
-      trim: true 
-    },
-    joinCount: { 
-      type: Number, 
-      default: 0 
-    },
+    }
   },
   { _id: false }
 );
@@ -118,19 +93,10 @@ const LectureSchema = new Schema(
       ref: "User", 
       required: true 
     },
-    recordingsURL:[
-      {
-        quality:{
-          type:String,
-          required:true,
-          enum:["144p","360p"]
-        },
-        url:{
-          type:String,
-          required:true,
-        }
-      }
-    ],
+    youtubeLiveStreamURL:{
+      type:String,
+      default:null
+    },
     attendance: [AttendanceSchema],
     statusTimestamps: {
       scheduledAt: { type: Date, default: Date.now },
