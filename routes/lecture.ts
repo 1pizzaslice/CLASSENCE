@@ -4,8 +4,6 @@ import {
     getLectures, 
     deleteLecture, 
     updateLecture, 
-    startLecture, 
-    endLecture ,
     startLiveSession,
     stopLiveSession,
 } from "../controllers";
@@ -22,14 +20,12 @@ router.delete("/delete", deleteLecture);
 
 router.patch("/update", updateLecture);
 
-router.post("/start", startLecture);
-
-router.post("/end", endLecture);
 
 router.post("/start-live-session", async (req, res, next) => {
     const { lectureId } = req.body;
     try {
-      const roomName = await startLiveSession({ lectureId, socketServer: io });
+
+      const roomName = await startLiveSession({req,res,next, lectureId, socketServer: io });
       res.status(200).json({ success: true, roomName });
     } catch (error) {
       next(error);
@@ -39,7 +35,7 @@ router.post("/start-live-session", async (req, res, next) => {
   router.post("/stop-live-session", async (req, res, next) => {
     const { lectureId } = req.body;
     try {
-      await stopLiveSession(lectureId, io);
+      await stopLiveSession(req,res,next,lectureId, io);
       res.status(200).json({ success: true });
     } catch (error) {
       next(error);

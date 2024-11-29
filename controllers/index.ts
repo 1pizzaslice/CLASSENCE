@@ -7,4 +7,4 @@ export {createAnnouncement,editAnnouncement,deleteAnnouncement} from "./announce
 export {createAssignment,updateAssignment,deleteAssignment,getAssignments} from "./assignment";
 export {createOrUpdateSubmission , gradeSubmission} from "./submission";
 export {getAllTodos,createTodo,updateTodo,deleteTodo,getTodoById} from "./todo";
-export { createLecture, getLectures, deleteLecture, updateLecture , startLecture, endLecture, startLiveSession ,stopLiveSession , } from './lecture'
+export { createLecture, getLectures, deleteLecture, updateLecture , startLiveSession ,stopLiveSession , } from './lecture'

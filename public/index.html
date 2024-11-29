@@ -95,10 +95,7 @@
         <h2>Login</h2>
         <div class="role-selector">
             <label>
-                <input type="radio" name="role" value="teacher"> Teacher
-            </label>
-            <label>
-                <input type="radio" name="role" value="student" checked> Student
+                <input type="radio" name="role" value="teacher" checked> Teacher
             </label>
         </div>
         <input type="text" id="tokenInput" class="token-input" placeholder="Enter your authentication token">
@@ -111,8 +108,7 @@
     <div id="liveStatus">Status: Not Connected</div>
 
     <div class="video-container">
-        <video id="localVideo" autoplay muted style="display: none;"></video>
-        <video id="remoteVideo" autoplay controls playsinline></video>
+        <video id="localVideo" autoplay muted></video>
     </div>
 
     <div id="controls" style="display: none;">
@@ -124,14 +120,10 @@
     <script>
         let socket;
         let localStream;
-        const peerConnections = new Map();
         let mediaRecorder;
-        const socketServerUrl = 'http://localhost:5000';
-        let isTeacher = false;
-        let isNegotiating = false;
+        const socketServerUrl = 'http://localhost:5001';
+        let isTeacher = true;
 
-        // UI Elements
-        const roleInputs = document.getElementsByName('role');
         const tokenInput = document.getElementById('tokenInput');
         const lectureInput = document.getElementById('lectureInput');
         const connectBtn = document.getElementById('connectBtn');
@@ -141,35 +133,6 @@
         const startSessionBtn = document.getElementById('startSessionBtn');
         const stopSessionBtn = document.getElementById('stopSessionBtn');
         const localVideoElement = document.getElementById('localVideo');
-        const remoteVideoElement = document.getElementById('remoteVideo');
-
-        // ICE configuration
-        const peerConfig = {
-            iceServers: [
-                { urls: 'stun:stun.l.google.com:19302' }
-            ]
-        };
-
-        roleInputs.forEach(input => {
-            input.addEventListener('change', (e) => {
-                isTeacher = e.target.value === 'teacher';
-                updateVideoDisplay();
-                controls.style.display = isTeacher ? 'block' : 'none';
-                if (isTeacher) {
-                    initializeTeacherFeatures();
-                }
-            });
-        });
-
-        function updateVideoDisplay() {
-            if (isTeacher) {
-                localVideoElement.style.display = 'block';
-                remoteVideoElement.style.display = 'none';
-            } else {
-                localVideoElement.style.display = 'none';
-                remoteVideoElement.style.display = 'block';
-            }
-        }
 
         function showError(message) {
             errorMessage.textContent = message;
@@ -181,52 +144,20 @@
         function initializeTeacherFeatures() {
             navigator.mediaDevices.getUserMedia({ 
                 video: { 
-                    width: { ideal: 1280 },
-                    height: { ideal: 720 }
+                    width: { ideal: 640 },
+                    height: { ideal: 480 }
                 }, 
                 audio: true 
             })
             .then(stream => {
                 localStream = stream;
                 localVideoElement.srcObject = stream;
+                console.log('Local stream:', stream);
             })
             .catch(error => {
                 console.error('Error accessing media devices:', error);
                 showError('Could not access camera/microphone');
             });
-        }
-
-        function createPeerConnection() {
-            const peerConnection = new RTCPeerConnection(peerConfig);
-            
-            peerConnection.onicecandidate = (event) => {
-                if (event.candidate) {
-                    socket.emit('ice-candidate', {
-                        roomId: `lecture-${lectureInput.value.trim()}`,
-                        data: event.candidate
-                    });
-                }
-            };
-
-            if (isTeacher) {
-                // Teacher only sends media
-                peerConnection.addTransceiver('video', { direction: 'sendonly' });
-                peerConnection.addTransceiver('audio', { direction: 'sendonly' }); 
-
-                localStream.getTracks().forEach(track => {
-                    peerConnection.addTrack(track, localStream);
-                });
-            } else {
-                // Students only receive media
-                peerConnection.addTransceiver('video', { direction: 'recvonly' });
-                peerConnection.addTransceiver('audio', { direction: 'recvonly' });
-
-                peerConnection.ontrack = (event) => {
-                    remoteVideoElement.srcObject = event.streams[0];
-                };
-            }
-
-            return peerConnection;
         }
 
         connectBtn.addEventListener('click', () => {
@@ -246,7 +177,7 @@
                 socket.disconnect();
             }
 
-            socket = io("http://localhost:5001", {
+            socket = io(socketServerUrl, {
                 query: { token },
                 autoConnect: false,
                 reconnection: true,
@@ -258,118 +189,12 @@
         }
 
         function setupSocketListeners(lectureId) {
-            let peerConnection;
-
-            socket.on('connect', () => {
+            socket.on('connect', async () => {
                 console.log('Connected to Socket.IO server');
                 liveStatusElement.textContent = 'Status: Connected';
-                controls.style.display = isTeacher ? 'block' : 'none';
-                peerConnection = createPeerConnection();
-
-                if (isTeacher) {
-                    // Teacher initiates connection
-                    peerConnection.createOffer()
-                        .then(offer => peerConnection.setLocalDescription(offer))
-                        .then(() => {
-                            socket.emit('broadcast-offer', {
-                                roomId: `lecture-${lectureId}`,
-                                data: peerConnection.localDescription
-                            });
-                        })
-                        .catch(err => console.error('Error creating offer:', err));
-                }
-
+                controls.style.display = 'block';
+                await initializeTeacherFeatures();
                 socket.emit('join-room', `lecture-${lectureId}`);
-            });
-
-            if (!isTeacher) {
-                socket.on('broadcast-offer', async ({ data }) => {
-                    try {
-                        await peerConnection.setRemoteDescription(new RTCSessionDescription(data));
-                        const answer = await peerConnection.createAnswer();
-                        await peerConnection.setLocalDescription(answer);
-
-                        socket.emit('broadcast-answer', {
-                            roomId: `lecture-${lectureId}`,
-                            data: answer
-                        });
-                    } catch (error) {
-                        console.error('Error handling broadcast offer:', error);
-                    }
-                });
-            }
-            if (!isTeacher) {
-              const mediaSource = new MediaSource();
-              remoteVideoElement.src = URL.createObjectURL(mediaSource);
-          
-              mediaSource.addEventListener('sourceopen', () => {
-                  const sourceBuffer = mediaSource.addSourceBuffer('video/webm;codecs=vp8,opus');
-                  const queue = [];
-                  let isAppending = false;
-          
-                  const appendNextChunk = () => {
-                      if (!isAppending && queue.length > 0 && mediaSource.readyState === 'open' && !sourceBuffer.updating) {
-                          isAppending = true;
-                          try {
-                              sourceBuffer.appendBuffer(queue.shift());
-                          } catch (error) {
-                              console.error('Error appending buffer:', error);
-                              isAppending = false;
-                          }
-                      }
-                  };
-          
-                  sourceBuffer.addEventListener('updateend', () => {
-                      isAppending = false;
-                      appendNextChunk();
-                  });
-          
-                  socket.on('recording-data', (chunk) => {
-                      queue.push(new Uint8Array(chunk));
-                      appendNextChunk();
-                  });
-          
-                  mediaSource.addEventListener('sourceclose', () => {
-                      console.log('MediaSource closed, cleaning up.');
-                  });
-              });
-          
-              socket.on('disconnect', () => {
-                  if (mediaSource.readyState === 'open') {
-                      mediaSource.endOfStream();
-                  }
-              });
-          
-              window.addEventListener('beforeunload', () => {
-                  if (mediaSource.readyState === 'open') {
-                      mediaSource.endOfStream();
-                  }
-              });
-          }
-          
-
-            socket.on('broadcast-answer', async ({ data }) => {
-                if (isTeacher && peerConnection.signalingState === 'have-local-offer') {
-                    try {
-                        await peerConnection.setRemoteDescription(new RTCSessionDescription(data));
-                    } catch (error) {
-                        console.error('Error setting remote description:', error);
-                    }
-                }
-            });
-
-            socket.on('ice-candidate', async ({ data }) => {
-                try {
-                    await peerConnection.addIceCandidate(new RTCIceCandidate(data));
-                } catch (error) {
-                    console.error('Error adding ICE candidate:', error);
-                }
-            });
-
-            socket.on('disconnect', () => {
-                if (peerConnection) {
-                    peerConnection.close();
-                }
             });
 
             socket.on('session-started', () => {
@@ -381,9 +206,11 @@
                 cleanupConnection();
             });
 
-            if (isTeacher) {
-                setupTeacherListeners(lectureId);
-            }
+            socket.on('youtube-video-url',(url)=>{
+                console.log(url);
+            })
+
+            setupTeacherListeners(lectureId);
         }
 
         function setupTeacherListeners(lectureId) {
@@ -398,10 +225,15 @@
                 })
                 .then(response => response.json())
                 .then(data => {
+
+                    console.log(data);
                     if (data.success) {
-                        socket.emit('start-recording', `lecture-${lectureId}`);
-                        updateLiveSessionStatus('started');
-                        startRecording(lectureId);
+                        socket.emit('start-streaming', `lecture-${lectureId}`);
+                        console.log('Starting streaming');
+                        setTimeout(()=>{
+                            startStreaming(lectureId);
+                        },0)
+                            updateLiveSessionStatus('started');
                     }
                 })
                 .catch(err => {
@@ -422,7 +254,7 @@
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
-                        socket.emit('stop-recording', `lecture-${lectureId}`);
+                        socket.emit('stop-streaming', `lecture-${lectureId}`);
                         socket.emit('session-ended', { roomId: `lecture-${lectureId}` });
                         updateLiveSessionStatus('ended');
                         cleanupConnection();
@@ -435,22 +267,18 @@
             });
         }
 
-        
+        function startStreaming(lectureId) {
 
-        function startRecording(lectureId) {
-            if (!mediaRecorder && localStream) {
-                socket.emit('start-recording', `lecture-${lectureId}`);
-
+            if (localStream) {
                 mediaRecorder = new MediaRecorder(localStream, {
-                    mimeType: 'video/webm;codecs=vp8,opus',
-                    videoBitsPerSecond: 1000000
+                    mimeType: 'video/webm; codecs=vp8,opus',
+                    videoBitsPerSecond: 250000
                 });
 
                 mediaRecorder.ondataavailable = (event) => {
                     if (event.data.size > 0) {
                         event.data.arrayBuffer().then(buffer => {
-                          //console.log("aaaa") 
-                            socket.emit('recording-data', {
+                            socket.emit('streaming-data', {
                                 roomId: `lecture-${lectureId}`,
                                 chunk: Array.from(new Uint8Array(buffer))
                             });
@@ -458,41 +286,30 @@
                     }
                 };
 
-                mediaRecorder.start(1000); // Send data every second
+                mediaRecorder.start(1000);
             }
         }
 
         function cleanupConnection() {
-            peerConnections.forEach(connection => {
-                connection.close();
-            });
-            peerConnections.clear();
-
             if (localStream) {
                 localStream.getTracks().forEach(track => track.stop());
                 localStream = null;
             }
-
-            if (remoteVideoElement.srcObject) {
-                const tracks = remoteVideoElement.srcObject.getTracks();
-                tracks.forEach(track => track.stop());
-                remoteVideoElement.srcObject = null;
+            if (mediaRecorder) {
+                mediaRecorder.stop();
+                mediaRecorder = null;
             }
         }
 
         function updateLiveSessionStatus(status) {
             if (status === 'started') {
                 liveStatusElement.textContent = 'Status: Live';
-                if (isTeacher) {
-                    startSessionBtn.disabled = true;
-                    stopSessionBtn.disabled = false;
-                }
+                startSessionBtn.disabled = true;
+                stopSessionBtn.disabled = false;
             } else {
                 liveStatusElement.textContent = 'Status: Not Started';
-                if (isTeacher) {
-                    startSessionBtn.disabled = false;
-                    stopSessionBtn.disabled = true;
-                }
+                startSessionBtn.disabled = false;
+                stopSessionBtn.disabled = true;
             }
         }
     </script>
