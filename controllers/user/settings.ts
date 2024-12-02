@@ -77,6 +77,9 @@ const changeIsNotificationEnabled = async (req: CustomRequest, res: Response, ne
 
 const changeName = async (req: CustomRequest, res: Response, next: NextFunction) => {
     const { name } = req.body;
+    if(name.trim.length<3){
+        return next(new CustomError("Name should be more than 3 characters", 400));
+    }
     if (!name) {
         return next(new CustomError("Name is required", 400));
     }

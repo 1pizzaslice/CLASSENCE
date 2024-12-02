@@ -46,7 +46,7 @@ const getClassroomDetails = async (req: CustomRequest, res: Response, next: Next
         }
         user.recentClasses = user.recentClasses.filter(id => id.toString() !== classroom._id.toString());
         user.recentClasses.unshift(classroom._id);
-        user.recentClasses = user.recentClasses.slice(0, 3);
+        user.recentClasses = user.recentClasses.slice(0, 2);
         await user.save();
         res.status(200).json({success:true,message:"Classroom details fetched successfully!", classroom });
     } catch (error) {
