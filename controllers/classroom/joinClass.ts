@@ -74,14 +74,7 @@ const joinClass = async (req: CustomRequest, res: Response, next: NextFunction) 
         res.status(200).send({
             success: true,
             message: 'Classroom joined successfully',
-            classroom:{
-                _id:classroom._id,
-                code:classroom.code,
-                teacher:{
-                    _id:classroom.teacher._id,
-                    name:classroom.teacher.name
-                }
-            }
+            classroom
         });
 
     } catch (error) {

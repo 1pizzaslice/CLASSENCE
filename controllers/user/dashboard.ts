@@ -1,10 +1,11 @@
-import { Response, NextFunction } from "express";
-import { CustomError, CustomRequest } from "../../types";
-import { User, Lecture, Todo } from "../../models";
-import { IClassroom } from "../../models/Classroom";
+import { Lecture, User } from "../../models";
 import { IAssignment } from "../../models/assignments";
+import { IClassroom } from "../../models/Classroom";
+import { AttendanceStatus } from "../../models/Lecture";
 import { ISubmission } from "../../models/submission";
-
+import Todo, { ITodo } from "../../models/Todo";
+import { CustomError, CustomRequest } from "../../types";
+import { Response, NextFunction } from "express";
 const dashboardPageData = async (req: CustomRequest, res: Response, next: NextFunction) => {
   const id = req.user?._id;
 
@@ -40,6 +41,14 @@ const dashboardPageData = async (req: CustomRequest, res: Response, next: NextFu
             },
           ],
         },
+        {
+          path:"recentClasses",
+          select:"students teacher name subject",
+          populate:{
+            path:"teacher",
+            select:"name"
+          }
+        }
       ]);
 
     if (!user) {
@@ -47,59 +56,39 @@ const dashboardPageData = async (req: CustomRequest, res: Response, next: NextFu
       return;
     }
 
-    const detailedJoinedAssignments: any[] = [];
-    const detailedJoinedLectures: any[] = [];
-    const detailedCreatedAssignments: any[] = [];
-    const detailedCreatedLectures: any[] = [];
-
     const classDetails = {
       joined: user.joinedClassrooms as unknown as IClassroom[],
       created: user.createdClassrooms as unknown as IClassroom[],
     };
 
-    let totalCompletedAssignmentsJoined = 0;
-    let totalDueSoonAssignmentsJoined = 0;
-    let totalOverdueAssignmentsJoined = 0;
-    let totalUpcomingLecturesJoined = 0;
-    let totalAttendanceJoined = 0;
+    const detailedJoinedAssignments: any[] = [];
+    const detailedJoinedLectures: any[] = [];
+    const detailedCreatedAssignments: any[] = [];
+    const detailedCreatedLectures: any[] = [];
 
-    let totalCompletedAssignmentsCreated = 0;
-    let totalDueSoonAssignmentsCreated = 0;
-    let totalOverdueAssignmentsCreated = 0;
-    let totalUpcomingLecturesCreated = 0;
-    let totalStudentsCreated = 0;
+    let totalAttendancePerClassJoined: { className: string, attendance: number }[] = [];
+    let totalAttendancePerClassCreated: { className: string, attendance: number }[] = [];
 
     const joinedClassPromises = classDetails.joined.map(async (classroom: IClassroom) => {
+      const lectures = await Lecture.find({ classroom: classroom._id });
+
+      let totalStudentsInClass = classroom.students.length;
+      let totalPresentStudents = 0;
+
+      lectures.forEach((lecture) => {
+        totalPresentStudents += lecture.attendance.filter(
+          (attendance) => attendance.status === AttendanceStatus.Present
+        ).length;
+      });
+
+      const averageAttendanceForClass = (totalPresentStudents / totalStudentsInClass) * 100;
+
+      totalAttendancePerClassJoined.push({
+        className: classroom.name,
+        attendance: averageAttendanceForClass,
+      });
+
       const assignments = classroom.assignments as unknown as IAssignment[];
-
-      const completedAssignments = assignments.filter((assignment) =>
-        assignment.submissions.some((submission) => {
-          const sub = submission as unknown as ISubmission;
-          return sub.isGraded === true;
-        })
-      ).length;
-
-      const overdueAssignments = assignments.filter((assignment) =>
-        new Date(assignment.dueDate) < new Date() &&
-        !assignment.submissions.some((submission) => {
-          const sub = submission as unknown as ISubmission;
-          return sub.isGraded === true;
-        })
-      ).length;
-
-      const dueSoonAssignments = assignments.filter((assignment) =>
-        new Date(assignment.dueDate) > new Date() &&
-        new Date(assignment.dueDate).getTime() - new Date().getTime() < 7 * 24 * 60 * 60 * 1000 &&
-        !assignment.submissions.some((submission) => {
-          const sub = submission as unknown as ISubmission;
-          return sub.isGraded === true;
-        })
-      ).length;
-
-      totalCompletedAssignmentsJoined += completedAssignments;
-      totalDueSoonAssignmentsJoined += dueSoonAssignments;
-      totalOverdueAssignmentsJoined += overdueAssignments;
-
       detailedJoinedAssignments.push({
         classroom: classroom.name,
         classroomSubject: classroom.subject,
@@ -113,16 +102,6 @@ const dashboardPageData = async (req: CustomRequest, res: Response, next: NextFu
         })),
       });
 
-      const now = new Date();
-      const nextDay = new Date();
-      nextDay.setDate(now.getDate() + 1);
-
-      const [lectures] = await Promise.all([
-        Lecture.find({ classroom: classroom._id, date: { $gte: now, $lt: nextDay } }),
-      ]);
-
-      totalUpcomingLecturesJoined += lectures.length;
-
       detailedJoinedLectures.push({
         classroom: classroom.name,
         classroomSubject: classroom.subject,
@@ -132,53 +111,36 @@ const dashboardPageData = async (req: CustomRequest, res: Response, next: NextFu
           attendance: lecture.attendance,
         })),
       });
-
-      const attendanceData = await Lecture.aggregate([
-        { $match: { classroom: classroom._id } },
-        { $unwind: "$attendance" },
-        { $group: { _id: "$attendance.student", totalAttendance: { $sum: 1 } } },
-      ]);
-      totalAttendanceJoined += attendanceData.length;
     });
 
     const createdClassPromises = classDetails.created.map(async (classroom: IClassroom) => {
+      const lectures = await Lecture.find({ classroom: classroom._id });
+
+      let totalStudentsInClass = classroom.students.length;
+      let totalPresentStudents = 0;
+
+      lectures.forEach((lecture) => {
+        totalPresentStudents += lecture.attendance.filter(
+          (attendance) => attendance.status === AttendanceStatus.Present
+        ).length;
+      });
+
+      const averageAttendanceForClass = (totalPresentStudents / totalStudentsInClass) * 100;
+
+      totalAttendancePerClassCreated.push({
+        className: classroom.name,
+        attendance: averageAttendanceForClass,
+      });
+
       const assignments = classroom.assignments as unknown as IAssignment[];
-      const totalStudents = classroom.students.length;
-
-      totalStudentsCreated += totalStudents;
-
-      const completedAssignments = assignments.filter((assignment) =>
-        assignment.submissions.some((submission) => {
-          const sub = submission as unknown as ISubmission;
-          return sub.isGraded === true;
-        })
-      ).length;
-
-      const overdueAssignments = assignments.filter((assignment) =>
-        new Date(assignment.dueDate) < new Date() &&
-        !assignment.submissions.some((submission) => {
-          const sub = submission as unknown as ISubmission;
-          return sub.isGraded === true;
-        })
-      ).length;
-
-      const dueSoonAssignments = assignments.filter((assignment) =>
-        new Date(assignment.dueDate) > new Date() &&
-        new Date(assignment.dueDate).getTime() - new Date().getTime() < 7 * 24 * 60 * 60 * 1000 &&
-        !assignment.submissions.some((submission) => {
-          const sub = submission as unknown as ISubmission;
-          return sub.isGraded === true;
-        })
-      ).length;
-
-      totalCompletedAssignmentsCreated += completedAssignments;
-      totalDueSoonAssignmentsCreated += dueSoonAssignments;
-      totalOverdueAssignmentsCreated += overdueAssignments;
+      const dueSoonAssignments = assignments
+        .sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime())
+        .slice(0, 2);
 
       detailedCreatedAssignments.push({
         classroom: classroom.name,
         classroomSubject: classroom.subject,
-        assignments: assignments.map((assignment) => ({
+        assignments: dueSoonAssignments.map((assignment) => ({
           title: assignment.name,
           dueDate: assignment.dueDate,
           isGraded: assignment.submissions.some((submission) => {
@@ -189,8 +151,6 @@ const dashboardPageData = async (req: CustomRequest, res: Response, next: NextFu
       });
 
       const upcomingLectures = await Lecture.find({ classroom: classroom._id, startTime: { $gte: new Date() } });
-      totalUpcomingLecturesCreated += upcomingLectures.length;
-
       detailedCreatedLectures.push({
         classroom: classroom.name,
         classroomSubject: classroom.subject,
@@ -204,7 +164,6 @@ const dashboardPageData = async (req: CustomRequest, res: Response, next: NextFu
     const userTodos = await Todo.find({ user: id });
 
     await Promise.all([...joinedClassPromises, ...createdClassPromises]);
-
     res.status(200).json({
       success: true,
       message: "Dashboard data fetched successfully!",
@@ -212,33 +171,28 @@ const dashboardPageData = async (req: CustomRequest, res: Response, next: NextFu
         name: user.name,
         email: user.email,
         createdAt: user.createdAt,
-        joinedClassrooms: user.joinedClassrooms.length,
-        createdClassrooms: user.createdClassrooms.length,
+        recentClasses: user.recentClasses,
       },
       summary: {
-        joined: {
-          totalAssignmentsCompleted: totalCompletedAssignmentsJoined,
-          totalDueSoonAssignments: totalDueSoonAssignmentsJoined,
-          totalOverdueAssignments: totalOverdueAssignmentsJoined,
-          totalUpcomingLectures: totalUpcomingLecturesJoined,
-          totalAttendance: totalAttendanceJoined,
-        },
-        created: {
-          totalAssignmentsCompleted: totalCompletedAssignmentsCreated,
-          totalDueSoonAssignments: totalDueSoonAssignmentsCreated,
-          totalOverdueAssignments: totalOverdueAssignmentsCreated,
-          totalUpcomingLectures: totalUpcomingLecturesCreated,
-          totalStudents: totalStudentsCreated,
-        },
+        totalCreatedClasses: user.createdClassrooms.length,
+        totalJoinedClasses: user.joinedClassrooms.length,
+        totalAssignments: (user.createdClassrooms as unknown as IClassroom[]).reduce(
+          (sum, classroom) => sum + (classroom.lectures ? classroom.lectures.length:0), 0
+        ),
+        totalLectures: (user.createdClassrooms as unknown as IClassroom[]).reduce(
+          (sum, classroom: IClassroom) => sum + (classroom.lectures ? classroom.lectures.length : 0), 0
+        ),
       },
       details: {
         joined: {
           assignments: detailedJoinedAssignments,
           lectures: detailedJoinedLectures,
+          averageAttendance: totalAttendancePerClassJoined,
         },
         created: {
           assignments: detailedCreatedAssignments,
-          lectures: detailedCreatedLectures,    
+          lectures: detailedCreatedLectures,
+          averageAttendance: totalAttendancePerClassCreated,
         },
         userTodos: userTodos.map((todo) => ({
           title: todo.title,
@@ -248,8 +202,11 @@ const dashboardPageData = async (req: CustomRequest, res: Response, next: NextFu
       },
     });
   } catch (error) {
+    console.error("Error fetching dashboard data", error);
     next(new CustomError("Error fetching dashboard data", 500));
   }
 };
+
+
 
 export default dashboardPageData;

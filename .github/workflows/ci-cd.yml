@@ -18,13 +18,13 @@ jobs:
         with:
           node-version: '18'  
 
-      - name: Install Dependencies
+      - name: Install Dependencies for Build
         run: npm install
 
       - name: Build the Project
         run: npm run build  
 
-      - name: Copy Files to Server
+      - name: Copy Built Files to Server
         shell: bash
         env:
           SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}  
@@ -38,11 +38,28 @@ jobs:
           ssh-keyscan -H $SERVER_IP >> ~/.ssh/known_hosts
           scp -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa -r ./dist/* $USERNAME@$SERVER_IP:$DPATH 
 
-      - name: Restart Service
+      - name: Update Dependencies on Server
         shell: bash
         env:
           SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}  
           USERNAME: ${{ secrets.SERVER_USER }}   
           SERVER_IP: ${{ secrets.SERVER_HOST }}
+          REPO_PATH: ${{ secrets.REPO_PATH }}
         run: |
-          ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa $USERNAME@$SERVER_IP 'sudo systemctl restart classence.service'
+          ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa $USERNAME@$SERVER_IP "
+            cd $REPO_PATH || exit 1;
+            git pull origin main;
+            npm install --production;
+          "
+
+      - name: Restart Application with PM2
+        shell: bash
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}  
+          USERNAME: ${{ secrets.SERVER_USER }}   
+          SERVER_IP: ${{ secrets.SERVER_HOST }}
+          REPO_PATH: ${{ secrets.REPO_PATH }}
+        run: |
+          ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa $USERNAME@$SERVER_IP "
+            pm2 restart classence-backend || pm2 start $REPO_PATH/dist/index.js --name classence-backend
+          "
