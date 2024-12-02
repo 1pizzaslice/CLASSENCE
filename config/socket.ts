@@ -87,7 +87,7 @@ const configureSocket = (io: Server) => {
           })
           .on('error', error => {
             console.error('FFmpeg encountered an error:', error.message);
-            throw error;
+            socket.disconnect();
           })
           .on('end', () => {
             console.log('Live streaming completed successfully.');

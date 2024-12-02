@@ -7,8 +7,12 @@ import { CustomError } from "../../types";
 
 export const requestPasswordReset = async (req: Request, res: Response,next:NextFunction) => {
   try {
-    const { email } = req.body;
-  
+    let { email } = req.body;
+    email = email.trim();
+    if (!email) {
+      next(new CustomError('Email is required', 400));
+      return;
+    }
     const user = await User.findOne({ email });
   
     if (!user) {
@@ -21,10 +25,10 @@ export const requestPasswordReset = async (req: Request, res: Response,next:Next
       return;
     }
 
-    const fiveMinutes = 5 * 60 * 1000;
+    const fiveMinutes = 0.5 * 60 * 1000;
     const now = Date.now();
     if (user.lastPasswordResetRequest && (now - user.lastPasswordResetRequest.getTime()) < fiveMinutes) {
-      next(new CustomError('You can request a new password reset link only every 5 minutes', 429));
+      next(new CustomError('You can request a new password reset link only every 30 sec', 429));
       return;
     }
   
@@ -87,7 +91,12 @@ export const requestPasswordReset = async (req: Request, res: Response,next:Next
 export const resetPassword = async (req: Request, res: Response,next:NextFunction) => {
   try {
     const { token } = req.params;
-    const { password } = req.body;  
+    let { password } = req.body;  
+    password = password.trim();
+    if (!password) {
+      next(new CustomError('Password is required', 400));
+      return;
+    }
     //   console.log(typeof token);
     if (typeof token !== 'string') {
       next(new CustomError('Invalid token', 400));

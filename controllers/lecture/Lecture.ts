@@ -84,8 +84,9 @@ const getLectures = async (req: CustomRequest, res: Response, next: NextFunction
         const futureLectures = await Lecture.find({ 
                 classroom: classroom._id,
                 startTime: { $gt: new Date(),
-                status: "Scheduled"
-                 }
+                 },
+                 status: { $ne: "Completed" }
+
             })
             .populate({
                 path: 'teacher',
@@ -271,10 +272,6 @@ const markAttendance = async (req: CustomRequest, res: Response, next: NextFunct
         }
         if(!user){
             next(new CustomError("User not found", 404));
-            return;
-        }
-        if(user.joinedClassrooms.indexOf(lecture.classroom.toString()) === -1){
-            next(new CustomError("You are not authorized to mark attendance for this lecture", 403));
             return;
         }
         if (lecture.status !== LectureStatus.InProgress || lecture.youtubeLiveStreamURL === "") {

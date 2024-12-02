@@ -4,7 +4,7 @@ import { NextFunction, Request, Response } from "express";
 import { CustomError } from "../types"; 
 
 const baseSchema = z.object({
-    name: z.string().min(3).optional(),
+    name: z.string().min(3,"Name should be more than 3 Characters.").optional(),
     email: z.string().min(6).email().optional(),
     password: z
         .string()
