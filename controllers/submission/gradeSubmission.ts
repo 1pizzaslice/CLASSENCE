@@ -19,12 +19,12 @@ const gradeSubmission = async (req:CustomRequest,res:Response,next:NextFunction)
             .select("assignment isGraded student marks")
             .populate({
                 path: "assignment",
-                select: "classroom",
+                select: "classroom name",
                 populate: {
                     path: "classroom",
                     select: "teacher",
                 }
-            }) as unknown as ISubmission & {assignment:{classroom:{teacher:{_id:string}}}}
+            }) as unknown as ISubmission & {assignment:{classroom:{teacher:{_id:string}},name:string}}
         ]);
         const student = await User.findById(submission.student);
 
@@ -48,7 +48,7 @@ const gradeSubmission = async (req:CustomRequest,res:Response,next:NextFunction)
             student.recentGrades = [];
         }
         student.recentGrades = student.recentGrades.filter(id => id.toString() !== submissionId.toString());
-        student.recentGrades.unshift(submissionId);
+        student.recentGrades.unshift(`You got ${marks} marks in ${submission.assignment.name}`);
         student.recentGrades = student.recentGrades.slice(0, 3);
 
         submission.isGraded = true;
