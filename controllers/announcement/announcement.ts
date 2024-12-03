@@ -2,10 +2,12 @@ import e, { Response, NextFunction } from "express";
 import { CustomError, CustomRequest } from "../../types";
 import {Announcement, Classroom, User} from '../../models';
 import fs from 'fs';
-import {cloudinary} from '../../config'
+// import {cloudinary} from '../../config'
 import { Upload } from '@aws-sdk/lib-storage';
 import {S3} from '../../config';
 import {v4 as uuidv4} from 'uuid';
+import { DeleteObjectCommand } from "@aws-sdk/client-s3";
+import { PutObjectCommand } from "@aws-sdk/client-s3";
 
 const createAnnouncement = async (req: CustomRequest, res: Response , next:NextFunction) => {
   const { title, description, poll,code } = req.body;
@@ -14,7 +16,7 @@ const createAnnouncement = async (req: CustomRequest, res: Response , next:NextF
     return;
   }
   const files = req.files as Express.Multer.File[] | undefined;
-  const mediaUrls = []; // cloudinary urls
+  const mediaUrls = []; 
 
   try {
     const data = await Classroom.aggregate([
@@ -69,6 +71,7 @@ const createAnnouncement = async (req: CustomRequest, res: Response , next:NextF
     }
 
     if (files && files.length > 0) {
+      console.log('Processing files:', files);
       const uploadPromises = files.map(async (file) => {
         const key = `announcements/${uuidv4()}-${file.originalname}`;
         const upload = new Upload({
@@ -81,7 +84,12 @@ const createAnnouncement = async (req: CustomRequest, res: Response , next:NextF
           },
         });
         const result = await upload.done();
-        fs.unlink(file.path, () => {});
+
+        console.log('File uploaded successfully:', result.Location);
+
+        fs.unlink(file.path, (err) => {
+          if (err) console.error(`Error deleting local file: ${file.path}`, err);
+        });
         return result.Location;
       });
     
@@ -149,31 +157,65 @@ const editAnnouncement = async (req: CustomRequest, res: Response, next: NextFun
     if (description) announcement.description = description;
     if (poll) announcement.poll = poll;
 
+    // if (files && files.length > 0) {
+    //   // delete old files
+    //   for (const url of announcement.media) {
+    //     const publicId = url.split('/').pop()?.split('.')[0];
+    //     if (publicId) {
+    //       await cloudinary.uploader.destroy(`announcements/${publicId}`);
+    //     }
+    //   }
+
+    //   // upload new files
+    //   const mediaUrls = [];
+    //   for (const file of files) {
+    //     const result = await cloudinary.uploader.upload(file.path, {
+    //       resource_type: 'auto',
+    //       folder: 'announcements',
+    //     });
+    //     mediaUrls.push(result.secure_url);
+
+    //     fs.unlink(file.path, (err) => {
+    //       if (err) console.error(`Error deleting local file: ${file.path}`, err);
+    //     });
+    //   }
+    //   announcement.media = mediaUrls;
+    // }
+
     if (files && files.length > 0) {
-      // delete old files
-      for (const url of announcement.media) {
-        const publicId = url.split('/').pop()?.split('.')[0];
-        if (publicId) {
-          await cloudinary.uploader.destroy(`announcements/${publicId}`);
-        }
+      // delete old files from S3
+      if (announcement.media && announcement.media.length > 0) {
+        const deletePromises = announcement.media.map(async (url) => {
+          const key = url.split("/").slice(-2).join("/"); 
+          const deleteParams = { Bucket: process.env.AWS_S3_BUCKET_NAME, Key: key };
+          await S3.send(new DeleteObjectCommand(deleteParams)); 
+        });
+        await Promise.all(deletePromises);
       }
 
-      // upload new files
-      const mediaUrls = [];
+
+      const mediaUrls: string[] = [];
       for (const file of files) {
-        const result = await cloudinary.uploader.upload(file.path, {
-          resource_type: 'auto',
-          folder: 'announcements',
-        });
-        mediaUrls.push(result.secure_url);
+        const key = `announcements/${uuidv4()}-${file.originalname}`;
+        const uploadParams = {
+          Bucket: process.env.AWS_S3_BUCKET_NAME,
+          Key: key,
+          Body: fs.createReadStream(file.path),
+          ContentType: file.mimetype,
+        };
+
+        const uploadResult = await S3.send(new PutObjectCommand(uploadParams)); // Upload to S3
+        const fileUrl = `https://${process.env.AWS_S3_BUCKET_NAME}.s3.amazonaws.com/${key}`;
+        mediaUrls.push(fileUrl);
 
         fs.unlink(file.path, (err) => {
           if (err) console.error(`Error deleting local file: ${file.path}`, err);
         });
       }
+
       announcement.media = mediaUrls;
     }
-
+    
     await announcement.save();
     res.status(200).json({success:true, message: 'Announcement updated successfully', announcement });
   } catch (error) {
@@ -210,17 +252,32 @@ const deleteAnnouncement = async (req: CustomRequest, res: Response, next: NextF
       return;
     }
 
-    if (announcement.media && announcement.media.length > 0) {
-      for (const url of announcement.media) {
-        const publicId = url.split('/').pop()?.split('.')[0];
-        if (publicId) {
-          await cloudinary.uploader.destroy(`announcements/${publicId}`);
-        }
-      }
+    const bucketName = process.env.AWS_S3_BUCKET_NAME;
+    if (!bucketName) {
+      throw new CustomError("AWS S3 bucket name is not configured in environment variables.", 500);
     }
 
-    await Promise.all([announcement.deleteOne(),classroom.updateOne({$pull:{announcements:announcement._id}})]);
-    res.status(200).json({success:true, message: 'Announcement deleted successfully' });
+    if (announcement.media && announcement.media.length > 0) {
+      const deletePromises = announcement.media.map(async (url) => {
+        const key = url.split("/").slice(-2).join("/"); 
+        const deleteParams = { 
+          Bucket: process.env.AWS_S3_BUCKET_NAME, 
+          Key: key 
+        };
+        await S3.send(new DeleteObjectCommand(deleteParams)); 
+      });
+      await Promise.all(deletePromises);
+    }
+
+    await Promise.all([
+      announcement.deleteOne(),
+      classroom.updateOne({$pull:{announcements:announcement._id}})
+    ]);
+
+    res.status(200).json({
+      success:true,
+      message: 'Announcement deleted successfully' 
+    });
   } catch (error) {
     const err = error as Error;
     next(new CustomError('Failed to delete announcement',500,`${err.message}`));
