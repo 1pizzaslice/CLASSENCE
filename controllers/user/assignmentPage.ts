@@ -4,6 +4,8 @@ import { User } from "../../models";
 import { IUser } from "../../models/User";
 import { IClassroom } from "../../models/Classroom";
 import { IAssignment } from "../../models/assignments";
+import moment from 'moment-timezone';
+
 
 const assignmentPageData = async (req: CustomRequest, res: Response, next: NextFunction) => {
   const id = req.user?._id;
@@ -28,7 +30,7 @@ const assignmentPageData = async (req: CustomRequest, res: Response, next: NextF
         select: "name code subject assignments teacher students",
         populate: {
           path: "assignments",
-          select: "title dueDate submissions",
+          select: "name dueDate submissions",
           populate: {
             path: "submissions",
             select: "isGraded",
@@ -40,7 +42,7 @@ const assignmentPageData = async (req: CustomRequest, res: Response, next: NextF
         select: "name code subject assignments teacher students",
         populate: {
           path: "assignments",
-          select: "title dueDate submissions",
+          select: "name dueDate submissions",
           populate: {
             path: "submissions",
             select: "isGraded",
@@ -57,7 +59,8 @@ const assignmentPageData = async (req: CustomRequest, res: Response, next: NextF
     let completedJoinedAssignments = 0;
     let overdueJoinedAssignments = 0;
     let dueSoonJoinedAssignments = 0;
-
+    const allJoinedAssignments: any[] = [];
+    // console.log(user.joinedClassrooms);
     const joinedClassroomsData = user.joinedClassrooms.map((classroom: IClassroom) => {
       const assignments = classroom.assignments as unknown as IAssignment[];
 
@@ -83,6 +86,14 @@ const assignmentPageData = async (req: CustomRequest, res: Response, next: NextF
         overdueJoinedAssignments += overdueAssignments;
         dueSoonJoinedAssignments += dueSoonAssignments;
       }
+      // console.log(assignments)
+      allJoinedAssignments.push(...assignments.map((assignment) => ({
+        classroom: classroom.name,
+        classroomSubject: classroom.subject,
+        title: assignment.name,
+        dueDate: moment(assignment.dueDate).tz('Asia/Kolkata').format('MMM D, hh:mm A'),
+        isGraded: assignment.submissions.some((s: any) => s.isGraded === true),
+      })));
 
       return {
         classroom: classroom,
@@ -96,6 +107,11 @@ const assignmentPageData = async (req: CustomRequest, res: Response, next: NextF
     let totalCreatedAssignments = 0;
     let totalCreatedSubmissions = 0;
     let completedCreatedSubmissions = 0;
+    let overdueCreatedAssignments=0;
+    let dueSoonCreatedAssignments=0;
+    let completedCreatedAssignments=0;
+    const allCreatedAssignments: any[] = [];
+
 
     const createdClassroomsData = user.createdClassrooms.map((classroom: IClassroom) => {
       const assignments = classroom.assignments as unknown as IAssignment[];
@@ -104,16 +120,40 @@ const assignmentPageData = async (req: CustomRequest, res: Response, next: NextF
       const totalSubmissions = assignments.reduce((sum, assignment) => sum + assignment.submissions.length, 0);
       const completedSubmissions = assignments.reduce((sum, assignment) =>
         sum + assignment.submissions.filter((s: any) => s.isGraded === true).length, 0);
+      const completedAssignments = assignments.filter((a) =>
+        a.submissions.some((s: any) => s.isGraded === true)
+      ).length;
 
+      const overdueAssignments = assignments.filter((a) =>
+        new Date(a.dueDate) < new Date() && !a.submissions.some((s: any) => s.isGraded === true)
+      ).length;
+
+      const dueSoonAssignments = assignments.filter((a) =>
+        new Date(a.dueDate) > new Date() &&
+        new Date(a.dueDate).getTime() - new Date().getTime() < 7 * 24 * 60 * 60 * 1000 &&
+        !a.submissions.some((s: any) => s.isGraded === true) &&
+        !(new Date(a.dueDate) < new Date())
+      ).length;
       totalCreatedAssignments += totalAssignments;
       totalCreatedSubmissions += totalSubmissions;
       completedCreatedSubmissions += completedSubmissions;
-
+      overdueCreatedAssignments += overdueAssignments;
+      dueSoonCreatedAssignments += dueSoonAssignments;
+      completedCreatedAssignments+=completedAssignments;
+      allCreatedAssignments.push(...assignments.map((assignment) => ({
+        classroom: classroom.name,
+        classroomSubject: classroom.subject,
+        title: assignment.name,
+        dueDate: moment(assignment.dueDate).tz('Asia/Kolkata').format('MMM D, hh:mm A'),
+        isGraded: assignment.submissions.some((s: any) => s.isGraded === true),
+      })));
       return {
         classroom: classroom,
         totalAssignments,
         totalSubmissions,
         completedSubmissions,
+        overdueAssignments,
+        dueSoonAssignments,
         notCompletedSubmissions: totalSubmissions - completedSubmissions,
       };
     });
@@ -133,6 +173,7 @@ const assignmentPageData = async (req: CustomRequest, res: Response, next: NextF
           overdueAssignments: overdueJoinedAssignments,
           dueSoonAssignments: dueSoonJoinedAssignments,
           perClassroomData: joinedClassroomsData,
+          allAssignments: allJoinedAssignments,
         },
         createdClassrooms: {
           totalClasses: user.createdClassrooms.length,
@@ -141,6 +182,11 @@ const assignmentPageData = async (req: CustomRequest, res: Response, next: NextF
           completedSubmissions: completedCreatedSubmissions,
           notCompletedSubmissions: notCompletedCreatedSubmissions,
           perClassroomData: createdClassroomsData,
+          overdueAssignments:overdueCreatedAssignments,
+          dueSoonAssignments:dueSoonCreatedAssignments,
+          allAssignments: allCreatedAssignments,
+          completedAssignments:completedCreatedAssignments  
+
         },
       },
     });

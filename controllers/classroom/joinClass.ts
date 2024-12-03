@@ -7,6 +7,7 @@ import jwt from "jsonwebtoken";
 
 const joinClass = async (req: CustomRequest, res: Response, next: NextFunction) => {
     const { code,token } = req.body;
+    // console.log(code)
     if (!code && !token) {
         next(new CustomError('Code or token is required', 400));
         return;
@@ -61,14 +62,18 @@ const joinClass = async (req: CustomRequest, res: Response, next: NextFunction) 
             Classroom.updateOne(
               { _id: classroom._id },
               {
-                $push: { students: id },
+                $addToSet: { students: id },
                 $pull: { invitedStudents: id }
               }
             ),
             User.updateOne(
               { _id: user._id },
-              { $push: { classRooms: classroom._id } },
-              {$push:{joinedClassrooms:classroom._id}}
+              {
+                $addToSet: {
+                  classRooms: classroom._id,
+                  joinedClassrooms: classroom._id
+                }
+              }
             )
           ]);
         res.status(200).send({
