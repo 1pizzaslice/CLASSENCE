@@ -1,9 +1,12 @@
 import e, { Response,NextFunction } from "express";
 import { CustomError,CustomRequest } from "../../types";
 import {Assignment,User,Submission} from '../../models';
-import fs from 'fs/promises';
+import fs from 'fs';
 import {cloudinary} from '../../config'
 import { IAssignment } from "../../models/assignments";
+import { Upload } from "@aws-sdk/lib-storage";
+import { S3 } from "../../config";
+import { v4 as uuidv4 } from "uuid";
 
 const createOrUpdateSubmission = async (req:CustomRequest,res:Response,next:NextFunction) => {
     const {assignmentId } = req.body;
@@ -51,19 +54,34 @@ const createOrUpdateSubmission = async (req:CustomRequest,res:Response,next:Next
             return next(new CustomError("At least one file is required for submission", 400));
         }
         
-        if(files && files.length > 0){
-            for(const file of files){
-                const result = await cloudinary.uploader.upload(file.path,{
-                    resource_type:'auto',
-                    folder:'submissions'
+        if (files && files.length > 0) {
+
+            const uploadPromises = files.map(async (file) => {
+                const key = `submission/${uuidv4()}-${file.originalname}`;
+                const upload = new Upload({
+                  client: S3,
+                  params: {
+                    Bucket: process.env.AWS_S3_BUCKET_NAME,
+                    Key: key,
+                    Body: fs.createReadStream(file.path),
+                    ContentType: file.mimetype,
+                  },
                 });
-                mediaUrls.push(result.secure_url);
-                try {
-                    await fs.unlink(file.path);
-                } catch (error) {
-                    console.error(`Failed to delete local file: ${file.path}`, error);
+                const result = await upload.done();
+                fs.unlink(file.path, () => {});
+                return result.Location;
+              });
+
+              const resolvedUrls = (await Promise.all(uploadPromises)).filter((location): location is string => {
+                if (!location) {
+                  console.error("S3 upload failed: Location is undefined.");
                 }
-            }
+                return location !== undefined;
+              });
+              
+              
+              mediaUrls.push(...resolvedUrls)
+
         }
 
         if(submission){
@@ -76,6 +94,7 @@ const createOrUpdateSubmission = async (req:CustomRequest,res:Response,next:Next
             });
             submission.media = mediaUrls;
             const submissionId = submission._id as string;
+
             assignment.submissions = [...(assignment.submissions || []).filter(s => s.toString() !== submissionId.toString()), submission._id as string];
             await submission.save();
         }else{
