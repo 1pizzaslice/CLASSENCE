@@ -208,8 +208,8 @@ export const chatSocket = (io: Server) => {
 
         socket.on('assignmentChatMessage', async (chatData) => {
             try {
-                const { assignmentId, message, file } = chatData;
-                
+                let { assignmentId, message, file } = chatData;
+                message = message.trim();
                 if (!assignmentId || (!message && !file)) {
                     return socket.emit('error', 'Invalid chat data');
                 }
@@ -276,8 +276,8 @@ export const chatSocket = (io: Server) => {
 
         socket.on('developerChatMessage', async (chatData) => {
             try {
-                const { message, file, userId } = chatData;
-                
+                let { message, file, userId } = chatData;
+                message = message.trim();
                 if (!userId || (!message && !file)) {
                     return socket.emit('error', 'Invalid chat data');
                 }
