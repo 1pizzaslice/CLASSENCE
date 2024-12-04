@@ -65,7 +65,7 @@ const assignmentPageData = async (req: CustomRequest, res: Response, next: NextF
       const assignments = classroom.assignments as unknown as IAssignment[];
 
       const totalAssignments = assignments.length;
-      console.log(assignments[0].submissions)
+      // console.log(assignments[0].submissions)
       const completedAssignments = assignments.filter((a) =>
         a.submissions.some((s: any) => s.isGraded === true)
       ).length;
