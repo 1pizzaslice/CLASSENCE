@@ -8,3 +8,4 @@ export {createAssignment,updateAssignment,deleteAssignment,getAssignments} from 
 export {createOrUpdateSubmission , gradeSubmission} from "./submission";
 export {getAllTodos,createTodo,updateTodo,deleteTodo,getTodoById} from "./todo";
 export { createLecture, getLectures, deleteLecture, updateLecture , startLiveSession ,stopLiveSession , } from './lecture'
+export {attendanceData} from "./attendance";

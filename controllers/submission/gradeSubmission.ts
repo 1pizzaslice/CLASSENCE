@@ -48,7 +48,7 @@ const gradeSubmission = async (req:CustomRequest,res:Response,next:NextFunction)
             student.recentGrades = [];
         }
         student.recentGrades = student.recentGrades.filter(id => id.toString() !== submissionId.toString());
-        student.recentGrades.unshift(`You got ${marks} marks in ${submission.assignment.name}`);
+        student.recentGrades.unshift(`You got ${marks}/10 marks in ${submission.assignment.name}`);
         student.recentGrades = student.recentGrades.slice(0, 3);
 
         submission.isGraded = true;
