@@ -34,6 +34,10 @@ const deleteClass = async(req:CustomRequest,res:Response,next:NextFunction) => {
         }
 
         classroom.isDeleted = true;
+        if (user.recentClasses) {
+          user.recentClasses = user.recentClasses.filter(classId => classId.toString() !== classroom._id.toString());
+          await user.save();
+        };
         await Promise.all([
             User.updateMany(
               { 

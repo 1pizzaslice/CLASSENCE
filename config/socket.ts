@@ -47,65 +47,69 @@ const configureSocket = (io: Server) => {
     socket.on("start-streaming", async (roomId: string) => {
       const room = rooms.get(roomId);
       console.log('Starting streaming for room:', roomId);
-      if (room && customSocket.user._id === room.teacherId) {
-        room.streamingStream = new PassThrough();
-
-        const youTubeService = new YouTubeLiveStreamService();
-        const { streamKey, streamUrl, broadcastId, streamId } = await youTubeService.createStream();
-        const url = `${streamUrl}/${streamKey}`;
-
-        const ffmpegCommand = ffmpeg()
-          .input(room.streamingStream)
-          .inputFormat('webm')
-          .outputOptions(
-            '-f', 'flv',
-            '-pix_fmt', 'yuv420p',
-            '-c:v', 'libx264',
-            '-qp:v', '19',
-            '-profile:v', 'high',
-            '-tune:v', 'zerolatency',
-            '-preset:v', 'ultrafast',
-            '-rc:v', 'cbr_ld_hq',
-            '-level:v', '4.2',
-            '-r:v', '60',
-            '-g:v', '120',
-            '-bf:v', '3',
-            '-refs:v', '16'
-          )
-          .output(url)
-          .videoCodec('libx264')
-          .audioCodec('aac')
-          .audioBitrate(128)
-          .videoBitrate(2000)
-          .on('start', commandLine => {
-            console.log('FFmpeg process started:', commandLine);
-          })
-          .on('progress', progress => {
-          })
-          .on('stderr', stderrLine => {
-            console.log('Stderr output:', stderrLine);
-          })
-          .on('error', error => {
-            console.error('FFmpeg encountered an error:', error.message);
-            socket.disconnect();
-          })
-          .on('end', () => {
-            console.log('Live streaming completed successfully.');
-          });
-
-        ffmpegCommand.run();
-        room.ffmpegCommand = ffmpegCommand;
-
-        await youTubeService.waitForStreamToBecomeActive(streamId);
-        await youTubeService.transitionBroadcast(broadcastId, "testing");
-        console.log("Broadcast transitioned to testing.");
-          await youTubeService.waitForBroadcastToBeInTesting(broadcastId);
-        await youTubeService.transitionBroadcast(broadcastId, "live");
-        console.log("Broadcast is now live.");
-        const videoUrl = await youTubeService.getBroadcastDetails(broadcastId);
-        const lecture = await Lecture.findById(roomId.replace('lecture-', ''));
-        lecture?.updateOne({ youtubeLiveStreamURL: videoUrl }).exec();
-        socket.emit('youtube-video-url', { url: videoUrl });
+      try{
+        if (room && customSocket.user._id === room.teacherId) {
+          room.streamingStream = new PassThrough();
+  
+          const youTubeService = new YouTubeLiveStreamService();
+          const { streamKey, streamUrl, broadcastId, streamId } = await youTubeService.createStream();
+          const url = `${streamUrl}/${streamKey}`;
+  
+          const ffmpegCommand = ffmpeg()
+            .input(room.streamingStream)
+            .inputFormat('webm')
+            .outputOptions(
+              '-f', 'flv',
+              '-pix_fmt', 'yuv420p',
+              '-c:v', 'libx264',
+              '-qp:v', '19',
+              '-profile:v', 'high',
+              '-tune:v', 'zerolatency',
+              '-preset:v', 'ultrafast',
+              '-rc:v', 'cbr_ld_hq',
+              '-level:v', '4.2',
+              '-r:v', '60',
+              '-g:v', '120',
+              '-bf:v', '3',
+              '-refs:v', '16'
+            )
+            .output(url)
+            .videoCodec('libx264')
+            .audioCodec('aac')
+            .audioBitrate(128)
+            .videoBitrate(2000)
+            .on('start', commandLine => {
+              console.log('FFmpeg process started:', commandLine);
+            })
+            .on('progress', progress => {
+            })
+            .on('stderr', stderrLine => {
+              console.log('Stderr output:', stderrLine);
+            })
+            .on('error', error => {
+              console.error('FFmpeg encountered an error:', error.message);
+              socket.disconnect();
+            })
+            .on('end', () => {
+              console.log('Live streaming completed successfully.');
+            });
+  
+          ffmpegCommand.run();
+          room.ffmpegCommand = ffmpegCommand;
+  
+          await youTubeService.waitForStreamToBecomeActive(streamId);
+          await youTubeService.transitionBroadcast(broadcastId, "testing");
+          console.log("Broadcast transitioned to testing.");
+            await youTubeService.waitForBroadcastToBeInTesting(broadcastId);
+          await youTubeService.transitionBroadcast(broadcastId, "live");
+          console.log("Broadcast is now live.");
+          const videoUrl = await youTubeService.getBroadcastDetails(broadcastId);
+          const lecture = await Lecture.findById(roomId.replace('lecture-', ''));
+          lecture?.updateOne({ youtubeLiveStreamURL: videoUrl }).exec();
+          socket.emit('youtube-video-url', { url: videoUrl });
+        }
+      }catch(error){
+        console.log(error);
       }
     });
 

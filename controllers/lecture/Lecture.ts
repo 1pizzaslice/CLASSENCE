@@ -211,10 +211,9 @@ interface StartSessionParams {
         if(lecture.teacher.toString() !== req.user?._id){
             throw new CustomError("You are not authorized to start this lecture", 403);
         }
-        if (lecture.status !== LectureStatus.Scheduled) {
-            throw new CustomError(`Lecture is currently ${lecture.status}`, 400);
-        }
-
+        // if (lecture.status !== LectureStatus.Scheduled) {
+        //     throw new CustomError(`Lecture is currently ${lecture.status}`, 400);
+        // }
 
         const roomName = `lecture-${lectureId}`;
         socketServer.to(roomName).emit("session-started", { message: "Live session has started." });
