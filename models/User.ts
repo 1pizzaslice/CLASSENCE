@@ -75,8 +75,7 @@ const UserSchema: Schema = new Schema({
         ref:'Classroom'
     }],
     recentGrades:[{
-        type:Schema.Types.ObjectId,
-        ref:'Submission'
+        type:String, 
     }],
     isNotificationEnabled:{
         type:Boolean,
