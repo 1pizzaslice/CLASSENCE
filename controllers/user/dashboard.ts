@@ -26,7 +26,7 @@ const dashboardPageData = async (req: CustomRequest, res: Response, next: NextFu
             path: "assignments",
             select: "name dueDate submissions classroom",
             populate: [
-              { path: "submissions", select: "isGraded" },
+              { path: "submissions", select: "isGraded student" },
               { path: "classroom", select: "name subject students" }
             ]
           },
@@ -109,6 +109,7 @@ const dashboardPageData = async (req: CustomRequest, res: Response, next: NextFu
           dueDate: assignment.dueDate,
           isGraded: assignment.submissions.some((submission) => {
             const sub = submission as unknown as ISubmission;
+            if(sub.student.toString() !== user._id.toString()) return false;
             return sub.isGraded === true;
           }),
         })),
@@ -214,7 +215,8 @@ const dashboardPageData = async (req: CustomRequest, res: Response, next: NextFu
       title: assignment.name,
       dueDate: moment(assignment.dueDate).tz('Asia/Kolkata').format('MMM D'),
     }));
-
+    totalAttendancePerClassCreated.sort((a, b) => a.className.localeCompare(b.className));
+    detailedCreatedAssignments.sort((a, b) => a.classroom.localeCompare(b.classroom)).slice(0,3);
     res.status(200).json({
       success: true,
       message: "Dashboard data fetched successfully!",
