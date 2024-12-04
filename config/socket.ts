@@ -4,6 +4,7 @@ import { PassThrough } from 'stream';
 import { Lecture } from "../models";
 import { YouTubeLiveStreamService } from '../yt-livestream';
 import ffmpeg from 'fluent-ffmpeg';
+import {stopLiveSession} from "../controllers"
 
 interface Room {
   id: string;
@@ -148,9 +149,11 @@ const configureSocket = (io: Server) => {
     });
 
     socket.on("disconnect", async () => {
-      rooms.forEach(room => {
+      rooms.forEach(async room => {
         try {
           if (room.teacherId === customSocket.user._id) {
+            const lectureId=room.id.replace('lecture-','');
+            await Lecture.findOneAndUpdate({ _id: lectureId }, { status: "Completed" });
             if (room.streamingStream) {
               room.streamingStream.end();
             }
