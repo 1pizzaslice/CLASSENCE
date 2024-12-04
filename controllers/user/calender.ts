@@ -3,6 +3,8 @@ import { CustomError, CustomRequest } from "../../types";
 import { User, Lecture, Assignment, Classroom } from "../../models";
 import { IAssignment } from "../../models/assignments";
 import { IClassroom } from "../../models/Classroom";
+import moment from 'moment-timezone';
+
 
 interface ClassroomDetails {
   classroom: string;
@@ -70,7 +72,6 @@ const calendarPageData = async (req: CustomRequest, res: Response, next: NextFun
 
     const now = new Date();
 
-    // Processing the joined classrooms
     const joinedClassPromises = classDetails.joined.map(async (classroom: IClassroom) => {
       const assignments = classroom.assignments as unknown as IAssignment[];
 
@@ -82,16 +83,17 @@ const calendarPageData = async (req: CustomRequest, res: Response, next: NextFun
         .populate("teacher classroom")
         .sort({ startTime: 1 });
 
-      // Separate arrays for assignments and lectures
       const detailedAssignments = upcomingAssignments.map((assignment) => ({
         title: assignment.name,
         dueDate: assignment.dueDate,
+        formattedDueDate: moment(assignment.dueDate).tz('Asia/Kolkata').format('MMM D, hh:mm A'),
         isGraded: assignment.submissions.some((submission: any) => submission.isGraded === true),
       }));
 
       const detailedLectures = upcomingLectures.map((lecture) => ({
         title: lecture.title,
         startTime: lecture.startTime,
+        formattedStartTime: moment(lecture.startTime).tz('Asia/Kolkata').format('MMM D, hh:mm A'),
       }));
 
       detailedJoinedClassrooms.push({
@@ -102,7 +104,6 @@ const calendarPageData = async (req: CustomRequest, res: Response, next: NextFun
       });
     });
 
-    // Processing the created classrooms
     const createdClassPromises = classDetails.created.map(async (classroom: IClassroom) => {
       const assignments = classroom.assignments as unknown as IAssignment[];
 
@@ -114,16 +115,17 @@ const calendarPageData = async (req: CustomRequest, res: Response, next: NextFun
         .populate("teacher classroom")
         .sort({ startTime: 1 });
 
-      // Separate arrays for assignments and lectures
       const detailedAssignments = upcomingAssignments.map((assignment) => ({
         title: assignment.name,
         dueDate: assignment.dueDate,
+        formattedDueDate: moment(assignment.dueDate).tz('Asia/Kolkata').format('MMM D, hh:mm A'),
         isGraded: assignment.submissions.some((submission: any) => submission.isGraded === true),
       }));
 
       const detailedLectures = upcomingLectures.map((lecture) => ({
         title: lecture.title,
         startTime: lecture.startTime,
+        formattedStartTime: moment(lecture.startTime).tz('Asia/Kolkata').format('MMM D, hh:mm A'),
       }));
 
       detailedCreatedClassrooms.push({

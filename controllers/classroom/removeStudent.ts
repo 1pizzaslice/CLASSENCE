@@ -40,6 +40,11 @@ const removeStudent = async(req:CustomRequest,res:Response,next:NextFunction) =>
 
         classroom.students = classroom.students.filter((student) => student.toString() !== studentId);
         
+        const student = await User.findById(studentId);
+        if (student && student.recentClasses) {
+        student.recentClasses = student.recentClasses.filter(classId => classId.toString() !== classroom._id.toString());
+        await student.save();
+        }
 
         await Promise.all([
             classroom.save(),
