@@ -20,6 +20,8 @@ export interface IUser extends Document {
     createdClassrooms:string[];
     joinedClassrooms:string[];
     isAdmin:boolean;
+    currentStreak:number;
+    longestStreak:number;
 }
 
 const UserSchema: Schema = new Schema({
@@ -88,7 +90,15 @@ const UserSchema: Schema = new Schema({
     isAdmin:{
         type:Boolean,
         default:false
-    }
+    },
+    currentStreak:{
+        type:Number,
+        default:0
+    },
+    longestStreak:{
+        type:Number,
+        default:0
+    },
 
 },{timestamps:true})
 

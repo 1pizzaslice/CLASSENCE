@@ -188,9 +188,6 @@ const updateLecture = async (req: CustomRequest, res: Response, next: NextFuncti
     }
 };
 
-const joinLecture = async (req: CustomRequest, res: Response, next: NextFunction) => {
-
-}
 
 
 interface StartSessionParams {
@@ -218,6 +215,7 @@ interface StartSessionParams {
         const roomName = `lecture-${lectureId}`;
         socketServer.to(roomName).emit("session-started", { message: "Live session has started." });
         lecture.status = LectureStatus.InProgress;
+        lecture.startTime = new Date();
         await lecture.save();
         console.log(`Live session started for lecture: ${lectureId}`);
         return roomName;
@@ -277,6 +275,7 @@ const markAttendance = async (req: CustomRequest, res: Response, next: NextFunct
             next(new CustomError("Lecture is not in progress", 400));
             return;
         }
+        
         const attendanceRecord = lecture.attendance.find(record => record.student.toString() === id);
 
         if (attendanceRecord) {
@@ -287,8 +286,24 @@ const markAttendance = async (req: CustomRequest, res: Response, next: NextFunct
                 status: AttendanceStatus.Present
             });
         }
-        await lecture.save();
-
+        const previousLecture = await Lecture.findOne({
+            classroom: lecture.classroom,
+            startTime: { $lt: lecture.startTime },
+            status: LectureStatus.Completed
+          }).sort({ startTime: -1 });
+      
+          if (previousLecture) {
+            const previousAttendance = previousLecture.attendance.find(record => record.student.toString() === id);
+            if (previousAttendance && previousAttendance.status === AttendanceStatus.Present) {
+              user.currentStreak = (user.currentStreak || 0) + 1;
+              user.longestStreak = Math.max(user.longestStreak || 0, user.currentStreak);
+            } else {
+              user.currentStreak = 1;
+            }
+          } else {
+            user.currentStreak = 1;
+          }
+        await Promise.all([lecture.save(), user.save()]);
         res.status(200).json({
             success: true,
             message: "Attendance marked successfully",
