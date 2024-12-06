@@ -108,11 +108,18 @@ class YouTubeLiveStreamService {
 
   public async waitForBroadcastToBeInTesting(broadcastId: string) {
     let lifeCycleStatus = await this.getBroadcastStatus(broadcastId);
-    while (lifeCycleStatus !== "testing") {
+    let attempts = 0;
+    const maxAttempts = 60;
+    while (lifeCycleStatus !== "testing"  && attempts < maxAttempts) {
       console.log(`Current broadcast lifecycle status: ${lifeCycleStatus}`);
       await new Promise(resolve => setTimeout(resolve, 5000));
       lifeCycleStatus = await this.getBroadcastStatus(broadcastId);
+      attempts++;
     }
+    if (lifeCycleStatus !== "testing") {
+      throw new Error("Stream failed to become testing after 5 minutes. Please ensure you are sending video data to the RTMP URL.");
+    }
+
     console.log("Broadcast is now in testing mode.");
   }
 

@@ -45,7 +45,7 @@ const assignmentPageData = async (req: CustomRequest, res: Response, next: NextF
           select: "name dueDate submissions",
           populate: {
             path: "submissions",
-            select: "isGraded",
+            select: "isGraded student",
           },
         },
       })as unknown as IUser & { joinedClassrooms: IClassroom[], createdClassrooms: IClassroom[] };
@@ -67,17 +67,17 @@ const assignmentPageData = async (req: CustomRequest, res: Response, next: NextF
       const totalAssignments = assignments.length;
       // console.log(assignments[0].submissions)
       const completedAssignments = assignments.filter((a) =>
-        a.submissions.some((s: any) => s.isGraded === true)
+        a.submissions.some((s: any) => (s.student._id.toString() ===id  && s.isGraded === true))
       ).length;
 
       const overdueAssignments = assignments.filter((a) =>
-        new Date(a.dueDate) < new Date() && !a.submissions.some((s: any) => s.isGraded === true)
+        new Date(a.dueDate) < new Date() && !a.submissions.some((s: any) =>s.student._id.toString() ===id &&  s.isGraded === true)
       ).length;
 
       const dueSoonAssignments = assignments.filter((a) =>
         new Date(a.dueDate) > new Date() &&
         new Date(a.dueDate).getTime() - new Date().getTime() < 7 * 24 * 60 * 60 * 1000 &&
-        !a.submissions.some((s: any) => s.isGraded === true) &&
+        !a.submissions.some((s: any) =>s.student._id.toString() ===id && s.isGraded === true) &&
         !(new Date(a.dueDate) < new Date())
       ).length;
 
