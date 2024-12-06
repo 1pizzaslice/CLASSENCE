@@ -79,9 +79,8 @@ const dashboardPageData = async (req: CustomRequest, res: Response, next: NextFu
 
     const joinedClassPromises = classDetails.joined.map(async (classroom: IClassroom) => {
       // console.log(classroom);
-      const lectures = await Lecture.find({ classroom: classroom._id });
+      const lectures = await Lecture.find({ classroom: classroom._id,status:"Completed" });
 
-      let totalStudentsInClass = classroom.students.length;
       let totalUserPresent = 0;
 
       lectures.forEach((lecture) => {
@@ -89,12 +88,15 @@ const dashboardPageData = async (req: CustomRequest, res: Response, next: NextFu
           (attendance) => attendance.status === AttendanceStatus.Present && attendance.student.toString() === id.toString()
         ).length;
       });
-
-      const averageAttendanceForClass = (totalUserPresent / totalStudentsInClass) * 100;
+      let averageAttendanceForUser=null;
+      if(lectures.length !== 0){
+         
+          averageAttendanceForUser = (totalUserPresent / lectures.length) * 100;
+      }
 
       totalAttendancePerClassJoined.push({
         className: classroom.name,
-        attendance: averageAttendanceForClass,
+        attendance: averageAttendanceForUser ?? 0,
         totalLectures: lectures.length,
       });
 
@@ -130,7 +132,7 @@ const dashboardPageData = async (req: CustomRequest, res: Response, next: NextFu
     const allJoinedAssignments: IAssignment[] = [];
 
     const createdClassPromises = classDetails.created.map(async (classroom: IClassroom) => {
-      const lectures = await Lecture.find({ classroom: classroom._id });
+      const lectures = await Lecture.find({ classroom: classroom._id,status:"Completed" });
 
       let totalStudentsInClass = classroom.students.length;
       let totalPresentStudents = 0;

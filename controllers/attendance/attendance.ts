@@ -26,7 +26,7 @@ const getAttendancePageData = async (req: CustomRequest, res: Response, next: Ne
       return;
     }
 
-    const lectures = await Lecture.find({ classroom: classroom._id });
+    const lectures = await Lecture.find({ classroom: classroom._id,status:"Completed" });
 
     if (isTeacher) {
       let totalPresent = 0;
