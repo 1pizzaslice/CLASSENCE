@@ -120,7 +120,7 @@ const sendDueReminders = async (): Promise<void> => {
 
       await sendEmail(
         user.email,
-        `Reminder: Upcoming Lecture "${lecture.title}"`,
+        reminder.reminderType === "assignment" ? `Reminder: Upcoming Assignment ${assignment.name}` : `Reminder: Upcoming Lecture ${lecture.title}`,
         emailContent,
       );
 
