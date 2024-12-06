@@ -7,6 +7,7 @@ import { Upload } from '@aws-sdk/lib-storage';
 import {S3} from '../../config';
 import {v4 as uuidv4} from 'uuid';
 import { sendEmail } from "../../utility"; 
+import { changeIsNotificationEnabled } from "../user";
 
 const createAnnouncement = async (req: CustomRequest, res: Response , next:NextFunction) => {
   const { title, description, poll,code } = req.body;
@@ -43,7 +44,7 @@ const createAnnouncement = async (req: CustomRequest, res: Response , next:NextF
           teacher: 1,
           teacherInfo: { _id: 1, classRooms: 1 },
           isDeleted: 1,
-          students: { _id: 1, email: 1, name: 1 },
+          students: { _id: 1, email: 1, name: 1 , isNotificationEnabled: 1 },
           announcements: 1
         }
       }
@@ -110,7 +111,9 @@ const createAnnouncement = async (req: CustomRequest, res: Response , next:NextF
       )
     ]);
 
-    const emailPromises = classroom.students.map((student: { email: string; name: string }) => {
+    const emailPromises = classroom.students
+    .filter((student: { isNotificationEnabled: boolean }) => student.isNotificationEnabled)
+    .map((student: { email: string; name: string }) => {
       const emailContent = `
       <p>Dear ${student.name},</p>
       <p>A new announcement has been posted in your class:</p>
