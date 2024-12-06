@@ -168,7 +168,6 @@ const assignmentPageData = async (req: CustomRequest, res: Response, next: NextF
         name: user.name,
         recentGrades: user.recentGrades,
         joinedClassrooms: {
-          classroomIds: user.joinedClassrooms.map((c: IClassroom) => c._id),
           totalClasses: user.joinedClassrooms.length,
           totalAssignments: totalJoinedAssignments,
           completedAssignments: completedJoinedAssignments,
@@ -178,7 +177,6 @@ const assignmentPageData = async (req: CustomRequest, res: Response, next: NextF
           allAssignments: allJoinedAssignments,
         },
         createdClassrooms: {
-          classroomIds: user.createdClassrooms.map((c: IClassroom) => c._id),
           totalClasses: user.createdClassrooms.length,
           totalAssignments: totalCreatedAssignments,
           totalSubmissions: totalCreatedSubmissions,

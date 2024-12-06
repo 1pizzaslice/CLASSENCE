@@ -6,6 +6,7 @@ import {cloudinary} from '../../config'
 import { Upload } from '@aws-sdk/lib-storage';
 import {S3} from '../../config';
 import {v4 as uuidv4} from 'uuid';
+import { sendEmail } from "../../utility"; 
 
 const createAnnouncement = async (req: CustomRequest, res: Response , next:NextFunction) => {
   const { title, description, poll,code } = req.body;
@@ -14,7 +15,7 @@ const createAnnouncement = async (req: CustomRequest, res: Response , next:NextF
     return;
   }
   const files = req.files as Express.Multer.File[] | undefined;
-  const mediaUrls = []; // cloudinary urls
+  const mediaUrls: string[] = []; 
 
   try {
     const data = await Classroom.aggregate([
@@ -85,7 +86,8 @@ const createAnnouncement = async (req: CustomRequest, res: Response , next:NextF
         return result.Location;
       });
     
-      mediaUrls.push(...(await Promise.all(uploadPromises)));
+      const uploadResults = await Promise.all(uploadPromises);
+      mediaUrls.push(...uploadResults.filter((url): url is string => url !== undefined));
     }
     
 
@@ -107,8 +109,27 @@ const createAnnouncement = async (req: CustomRequest, res: Response , next:NextF
         { new: true }
       )
     ]);
+
+    const emailPromises = classroom.students.map((student: { email: string; name: string }) => {
+      const emailContent = `
+      <p>Dear ${student.name},</p>
+      <p>A new announcement has been posted in your class:</p>
+      <h3>${title}</h3>
+      <p>${description}</p>
+      ${mediaUrls.length > 0 ? `<p>Attached Media: ${mediaUrls.join(', ')}</p>` : ''}
+      <p>Check your classroom for more details.</p>
+      <p>Best regards,<br>Classence Team</p>
+      `;
+      return sendEmail(student.email, 'New Announcement in Your Class', emailContent);
+    });
+
+    await Promise.all(emailPromises);
   
-    res.status(201).json({success:true, message: 'Announcement created successfully', announcement: newAnnouncement });
+    res.status(201).json({success:true, 
+      message: 'Announcement created successfully', 
+      announcement: newAnnouncement 
+    });
+
   } catch (error) {
     const err = error as Error;
     next(new CustomError('Failed to create announcement',500,`${err.message}`));
