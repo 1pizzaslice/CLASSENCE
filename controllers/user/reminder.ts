@@ -1,35 +1,61 @@
 import { Response, NextFunction } from "express";
-import {Reminder,Lecture} from "../../models/";
+import {Reminder,Lecture, Assignment} from "../../models/";
 import { CustomError, CustomRequest } from "../../types";
+import moment from "moment-timezone";
 
 export const createReminder = async (req: CustomRequest, res: Response, next: NextFunction) => {
-  const { lectureId, scheduledTime } = req.body;
+  const { lectureId, scheduledTime,assignmentId } = req.body;
+  //TODO:ADD SUPPORT FOR ASSIGNMENT
   const userId = req.user?._id;
 
   if (!userId) {
     next(new CustomError("User not authenticated", 401));
     return;
   }
-  if (!lectureId || !scheduledTime) {
-    next(new CustomError("Lecture ID and scheduled time are required", 400));
+  if ((!lectureId && !assignmentId) || !scheduledTime) {
+    next(new CustomError("Lecture ID/Assignment ID and scheduled time are required", 400));
     return;
+    }
+    if(scheduledTime < new Date()){
+      next(new CustomError("Cannot set reminder for past time", 400));
+      return;
     }
 
   try {
-    const lectureExists = await Lecture.findById(lectureId);
-    if (!lectureExists) {
-      next(new CustomError("Lecture not found", 404));
-      return;
-    }
-    if(lectureExists.startTime < new Date()){
-        next(new CustomError("Cannot set reminder for past lectures", 400));
+    let reminder;
+    if(lectureId){
+      const lectureExists = await Lecture.findById(lectureId);
+      if (!lectureExists) {
+        next(new CustomError("Lecture not found", 404));
         return;
+      }
+      if(lectureExists.startTime < new Date()){
+          next(new CustomError("Cannot set reminder for past lectures", 400));
+          return;
+      }
+      reminder = await Reminder.create({
+        user: userId,
+        lecture: lectureId,
+        scheduledTime,
+        reminderType:"lecture"
+      });
+    }else{
+      const assignmentExists = await Assignment.findById(assignmentId);
+      if (!assignmentExists) {
+        next(new CustomError("Assignment not found", 404));
+        return;
+      }
+      if(assignmentExists.dueDate < new Date()){
+          next(new CustomError("Cannot set reminder for past assignments", 400));
+          return;
+      }
+      reminder = await Reminder.create({
+        user: userId,
+        assignment: assignmentId,
+        scheduledTime,
+        reminderType:"assignment"
+      });
     }
-    const reminder = await Reminder.create({
-      user: userId,
-      lecture: lectureId,
-      scheduledTime,
-    });
 
     res.status(201).json({
       success: true,
@@ -104,14 +130,16 @@ export const getAllReminders = async (req: CustomRequest, res: Response, next: N
   }
 
   try {
-    const reminders = await Reminder.find({ user: userId }).populate("lecture", "title startTime");
-
+    const reminders = await Reminder.find({ user: userId }).populate("lecture", "title startTime").populate("assignment","title dueDate");
+    const formattedReminders = reminders.map(reminder => ({
+      ...reminder.toObject(),
+      scheduledTime: moment(reminder.scheduledTime).tz('Asia/Kolkata').format('MMM D, hh:mm A')
+    }));
     res.status(200).json({
       success: true,
-      reminders,
+      reminders:formattedReminders,
     });
   } catch (error) {
     next(new CustomError("Error fetching reminders", 500));
   }
 };
-

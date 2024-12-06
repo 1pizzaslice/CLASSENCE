@@ -83,9 +83,7 @@ const getLectures = async (req: CustomRequest, res: Response, next: NextFunction
 
         const futureLectures = await Lecture.find({ 
                 classroom: classroom._id,
-                startTime: { $gt: new Date(),
-                 },
-                 status: { $ne: "Completed" }
+                status: { $ne: "Completed" }
 
             })
             .populate({

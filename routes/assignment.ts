@@ -7,7 +7,7 @@ import { fileUploadMiddleware } from "../middlewares";
 
 router.post('/create', fileUploadMiddleware, createAssignment);
 router.put('/edit/:id', fileUploadMiddleware, updateAssignment); 
-router.delete('/delete/:id', deleteAssignment); 
+router.delete('/delete', deleteAssignment); 
 router.get('/get', getAssignments);
 
 export default router;

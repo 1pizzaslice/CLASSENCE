@@ -56,7 +56,6 @@ const calendarPageData = async (req: CustomRequest, res: Response, next: NextFun
           ],
         },
       ]);
-
     if (!user) {
       next(new CustomError("User not found", 404));
       return;
