@@ -1,0 +1,15 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = require("express");
+const controllers_1 = require("../controllers");
+const middlewares_1 = require("../middlewares");
+const router = (0, express_1.Router)();
+router.get('/details', controllers_1.getUserDetails);
+router.get('/assignment', controllers_1.assignmentPageData);
+router.get('/dashboard', controllers_1.dashboardPageData);
+router.get('/calendar', controllers_1.calendarPageData);
+router.post("/settings/change-password", (0, middlewares_1.validateRequest)(middlewares_1.changePasswordSchema), controllers_1.changePassword);
+router.post("/settings/change-name", controllers_1.changeName);
+router.post("/settings/change-is-notification-enabled", controllers_1.changeIsNotificationEnabled);
+router.post("/settings/sign-out-all-devices", controllers_1.signOutAllDevices);
+exports.default = router;
