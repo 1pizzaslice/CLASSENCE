@@ -1,0 +1,10 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = require("express");
+const router = (0, express_1.Router)();
+const controllers_1 = require("../controllers");
+const middlewares_1 = require("../middlewares");
+router.post('/create', middlewares_1.fileUploadMiddleware, controllers_1.createAnnouncement);
+router.put('/edit/:id', middlewares_1.fileUploadMiddleware, controllers_1.editAnnouncement);
+router.delete('/delete/:id', controllers_1.deleteAnnouncement);
+exports.default = router;
