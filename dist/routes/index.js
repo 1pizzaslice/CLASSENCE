@@ -1,0 +1,24 @@
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.reminderRoute = exports.lectureRoute = exports.todoRoute = exports.submissionRoute = exports.assignmentRoute = exports.userRoute = exports.announcementRoute = exports.classroomRoute = exports.authRoute = void 0;
+var auth_1 = require("./auth");
+Object.defineProperty(exports, "authRoute", { enumerable: true, get: function () { return __importDefault(auth_1).default; } });
+var classroom_1 = require("./classroom");
+Object.defineProperty(exports, "classroomRoute", { enumerable: true, get: function () { return __importDefault(classroom_1).default; } });
+var announcement_1 = require("./announcement");
+Object.defineProperty(exports, "announcementRoute", { enumerable: true, get: function () { return __importDefault(announcement_1).default; } });
+var user_1 = require("./user");
+Object.defineProperty(exports, "userRoute", { enumerable: true, get: function () { return __importDefault(user_1).default; } });
+var assignment_1 = require("./assignment");
+Object.defineProperty(exports, "assignmentRoute", { enumerable: true, get: function () { return __importDefault(assignment_1).default; } });
+var submission_1 = require("./submission");
+Object.defineProperty(exports, "submissionRoute", { enumerable: true, get: function () { return __importDefault(submission_1).default; } });
+var todo_1 = require("./todo");
+Object.defineProperty(exports, "todoRoute", { enumerable: true, get: function () { return __importDefault(todo_1).default; } });
+var lecture_1 = require("./lecture");
+Object.defineProperty(exports, "lectureRoute", { enumerable: true, get: function () { return __importDefault(lecture_1).default; } });
+var reminder_1 = require("./reminder");
+Object.defineProperty(exports, "reminderRoute", { enumerable: true, get: function () { return __importDefault(reminder_1).default; } });
